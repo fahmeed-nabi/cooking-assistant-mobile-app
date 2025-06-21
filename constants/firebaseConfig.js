@@ -1,21 +1,10 @@
-// firebaseConfig.js
-import { getAnalytics } from "firebase/analytics";
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
+// constants/firebaseConfig.js
+export const firebaseConfig = {
   apiKey: "AIzaSyD38se392nxkMln8z5ecFfyD8GzX-7Ak9A",
   authDomain: "mealmatch-8749c.firebaseapp.com",
   projectId: "mealmatch-8749c",
-  storageBucket: "mealmatch-8749c.firebasestorage.app",
+  storageBucket: "mealmatch-8749c.appspot.com",
   messagingSenderId: "321941546931",
   appId: "1:321941546931:web:2fc880050d6c3482934dc6",
-  measurementId: "G-GQZ3JWK8F5"
+  measurementId: "G-GQZ3JWK8F5" // this is harmless, even if unused
 };
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
