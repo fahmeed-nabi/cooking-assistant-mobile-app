@@ -2,7 +2,7 @@
 export const API_CONFIG = {
   // Spoonacular API (Recommended - Most comprehensive)
   // Get free API key at: https://spoonacular.com/food-api
-  SPOONACULAR_API_KEY: 'YOUR_SPOONACULAR_API_KEY',
+  SPOONACULAR_API_KEY: 'f636bdf58d5e49229f293a840761ba8a',
   
   // Alternative APIs (Free, no key required)
   USE_MEALDB_FALLBACK: true, // TheMealDB API as fallback

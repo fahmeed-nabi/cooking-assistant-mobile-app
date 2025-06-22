@@ -46,7 +46,10 @@ export default function RecipesScreen() {
   const renderRecipeItem = ({ item }: { item: Recipe }) => (
     <TouchableOpacity
       style={styles.recipeCard}
-      onPress={() => router.push(`/recipe/${item.id}`)}
+      onPress={() => {
+        console.log(`Navigating to recipe with ID: ${item.id}`);
+        router.push(`/recipe/${item.id}`);
+      }}
     >
       <Image
         source={{ uri: item.image }}

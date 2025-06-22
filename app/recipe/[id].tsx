@@ -12,8 +12,9 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { apiService } from '../../services/apiService';
 import { auth, db } from '../../services/firebase';
-import { getRecipeById, Recipe } from '../../services/recipeData';
+import { Recipe } from '../../services/recipeData';
 
 export default function RecipeDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -29,15 +30,23 @@ export default function RecipeDetailScreen() {
     loadUserData();
   }, [id]);
 
-  const loadRecipe = () => {
-    const foundRecipe = getRecipeById(id as string);
-    if (foundRecipe) {
-      setRecipe(foundRecipe);
-    } else {
-      Alert.alert('Error', 'Recipe not found');
+  const loadRecipe = async () => {
+    setLoading(true);
+    try {
+      const foundRecipe = await apiService.getRecipeById(id as string);
+      if (foundRecipe) {
+        setRecipe(foundRecipe);
+      } else {
+        Alert.alert('Error', 'Recipe not found');
+        router.back();
+      }
+    } catch (error) {
+      console.error('Error loading recipe details:', error);
+      Alert.alert('Error', 'Could not load recipe details.');
       router.back();
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const loadUserData = async () => {

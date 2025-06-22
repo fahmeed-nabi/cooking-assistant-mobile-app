@@ -37,8 +37,6 @@ export interface APIRecipe {
   id: number;
   title: string;
   image: string;
-  ingredients: string[];
-  instructions: string[];
   readyInMinutes: number;
   cuisines: string[];
   diets: string[];
@@ -50,6 +48,9 @@ export interface APIRecipe {
       unit: string;
     }>;
   };
+  extendedIngredients?: Array<{ original: string; name:string }>;
+  analyzedInstructions?: Array<{ name: string; steps: Array<{ number: number; step: string }> }>;
+  instructions?: string;
 }
 
 export interface SearchParams {
@@ -304,12 +305,23 @@ class APIService {
 
   // Transform Spoonacular API recipe to our Recipe format
   private transformAPIRecipe(apiRecipe: APIRecipe): Recipe {
+    const ingredients = apiRecipe.extendedIngredients?.map(ing => ing.original) || [];
+    
+    let instructions: string[] = [];
+    if (apiRecipe.analyzedInstructions && apiRecipe.analyzedInstructions.length > 0) {
+      // Flatten all steps from all instruction sections
+      instructions = apiRecipe.analyzedInstructions.flatMap(section => section.steps.map(step => step.step));
+    } else if (typeof apiRecipe.instructions === 'string') {
+      // Basic parsing for string instructions, removing HTML tags
+      instructions = apiRecipe.instructions.replace(/<[^>]*>/g, '').split('\\n').filter((i: string) => i.trim() !== '');
+    }
+
     return {
       id: apiRecipe.id.toString(),
       title: apiRecipe.title,
       image: apiRecipe.image,
-      ingredients: apiRecipe.ingredients || [],
-      instructions: apiRecipe.instructions || [],
+      ingredients,
+      instructions,
       cookTime: apiRecipe.readyInMinutes || 30,
       cuisine: apiRecipe.cuisines?.[0] || 'International',
       dietary: apiRecipe.diets || [],
