@@ -370,27 +370,43 @@ export const filterRecipesByIngredients = (
   userIngredients: string[],
   mode: 'normal' | 'loose' | 'surprise'
 ): Recipe[] => {
+  const lowerCaseUserIngredients = userIngredients.map(i => i.toLowerCase());
+
   switch (mode) {
     case 'normal':
-      return recipes.filter(recipe =>
-        recipe.ingredients.every(ingredient => 
-          userIngredients.includes(ingredient.toLowerCase())
-        )
-      );
+      // 'Normal' match: Perfect matches or recipes with very few (e.g., 1) missing ingredients.
+      // This is more practical than a perfect-only match.
+      return recipes.filter(recipe => {
+        const missingIngredients = recipe.ingredients.filter(
+          ingredient => !lowerCaseUserIngredients.includes(ingredient.toLowerCase())
+        );
+        return missingIngredients.length <= 1; // Allow up to 1 missing ingredient
+      });
+      
     case 'loose':
+      // 'Loose' match: Allows for several missing ingredients, but requires at least one match.
       return recipes.filter(recipe => {
-        const missingIngredients = recipe.ingredients.filter(ingredient =>
-          !userIngredients.includes(ingredient.toLowerCase())
+        const missingIngredients = recipe.ingredients.filter(
+          ingredient => !lowerCaseUserIngredients.includes(ingredient.toLowerCase())
         );
-        return missingIngredients.length <= 3;
-      });
-    case 'surprise':
-      return recipes.filter(recipe => {
         const matchingIngredients = recipe.ingredients.filter(ingredient =>
-          userIngredients.includes(ingredient.toLowerCase())
+          lowerCaseUserIngredients.includes(ingredient.toLowerCase())
         );
-        return matchingIngredients.length >= 2;
+        return missingIngredients.length <= 3 && matchingIngredients.length > 0;
       });
+
+    case 'surprise':
+      // 'Surprise Me': Finds creative recipes that use at least one of the user's ingredients.
+      // Results are shuffled to provide variety.
+      const surpriseRecipes = recipes.filter(recipe => {
+        const matchingIngredients = recipe.ingredients.filter(ingredient =>
+          lowerCaseUserIngredients.includes(ingredient.toLowerCase())
+        );
+        return matchingIngredients.length >= 1;
+      });
+      // Simple shuffle
+      return surpriseRecipes.sort(() => 0.5 - Math.random());
+      
     default:
       return recipes;
   }
