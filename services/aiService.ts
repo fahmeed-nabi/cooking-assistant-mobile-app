@@ -1,5 +1,9 @@
 // AI/ML Service for intelligent recipe matching and recommendations
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { API_CONFIG } from '../constants/apiConfig';
 import { Recipe } from './recipeData';
+
+const genAI = new GoogleGenerativeAI(API_CONFIG.GEMINI_API_KEY);
 
 export interface RecipeMatch {
   recipe: Recipe;
@@ -460,6 +464,86 @@ class AIService {
       favoriteIngredients: [...new Set([...implicit.favoriteIngredients, ...explicit.favoriteIngredients])],
       dislikedIngredients: explicit.dislikedIngredients
     };
+  }
+
+  async generateRecipe(ingredients: string[]): Promise<Recipe | null> {
+    if (!API_CONFIG.GEMINI_API_KEY || API_CONFIG.GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY') {
+      console.log('🤖 Gemini API key not found, returning null');
+      return null;
+    }
+
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const prompt = this.createRecipePrompt(ingredients);
+
+    try {
+      console.log('🧠 Calling Gemini API...');
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+      
+      console.log('✅ Gemini response received');
+      
+      const recipeJson = this.parseRecipeJson(text);
+      
+      // Add a unique ID and default image to the AI-generated recipe
+      recipeJson.id = `ai-${Date.now()}`;
+      recipeJson.image = `https://images.unsplash.com/photo-1542010589005-d1eacc3918f2?w=400`; // Default image
+
+      return recipeJson as Recipe;
+    } catch (error) {
+      console.error('❌ Error generating recipe with AI:', error);
+      return null;
+    }
+  }
+
+  private parseRecipeJson(text: string): any {
+    console.log('📄 Parsing response text:', text);
+    try {
+      // Find the start and end of the JSON block
+      const startIndex = text.indexOf('```json');
+      const endIndex = text.lastIndexOf('```');
+
+      if (startIndex === -1 || endIndex === -1) {
+        throw new Error('Could not find JSON block in response');
+      }
+
+      // Extract and parse the JSON string
+      const jsonString = text.substring(startIndex + 7, endIndex).trim();
+      return JSON.parse(jsonString);
+    } catch (error) {
+      console.error('❌ Error parsing recipe JSON:', error);
+      throw new Error('Failed to parse AI-generated recipe');
+    }
+  }
+
+  private createRecipePrompt(ingredients: string[]): string {
+    return `
+      You are a creative chef and culinary expert. Your task is to invent a unique and delicious recipe based on a given list of ingredients.
+
+      Ingredients provided: ${ingredients.join(', ')}
+
+      Your response MUST be a single, valid JSON object that follows this exact structure:
+      \`\`\`json
+      {
+        "title": "A creative and appealing recipe title",
+        "ingredients": [
+          "List of all ingredients required, including amounts (e.g., '1 cup flour', '2 large eggs'). You can include ingredients not from the provided list if necessary.",
+          "..."
+        ],
+        "instructions": [
+          "A clear, step-by-step instruction for preparing the recipe.",
+          "Another step.",
+          "..."
+        ],
+        "cookTime": "The total cook time in minutes (e.g., 30)",
+        "cuisine": "The most appropriate cuisine (e.g., 'Italian', 'Fusion')",
+        "dietary": ["A list of dietary characteristics if applicable (e.g., 'vegan', 'gluten-free')"],
+        "difficulty": "The difficulty of the recipe ('Easy', 'Medium', or 'Hard')"
+      }
+      \`\`\`
+
+      Do not include any text, explanation, or markdown formatting before or after the JSON object. Your entire response must be only the JSON.
+    `;
   }
 }
 

@@ -1,5 +1,6 @@
 // API Service for external recipe and ingredient databases
 import { API_CONFIG, API_ENDPOINTS } from '../constants/apiConfig';
+import { aiService } from './aiService';
 import { MOCK_RECIPES, Recipe, filterRecipesByIngredients } from './recipeData';
 
 // API Configuration
@@ -209,6 +210,17 @@ class APIService {
   // Search recipes by ingredients (AI-powered matching)
   async searchRecipesByIngredients(ingredients: string[], mode: 'normal' | 'loose' | 'surprise'): Promise<Recipe[]> {
     console.log('🔍 Searching recipes by ingredients:', { ingredients, mode });
+
+    if (mode === 'surprise') {
+      console.log('🤖 Calling AI to generate a surprise recipe...');
+      const aiRecipe = await aiService.generateRecipe(ingredients);
+      if (aiRecipe) {
+        return [aiRecipe]; // Return the single AI-generated recipe
+      } else {
+        console.log('⚠️ AI recipe generation failed, falling back to local search');
+        return this.searchRecipesByIngredientsLocal(ingredients, 'surprise');
+      }
+    }
     
     try {
       if (!SPOONACULAR_API_KEY || SPOONACULAR_API_KEY === 'YOUR_SPOONACULAR_API_KEY') {
