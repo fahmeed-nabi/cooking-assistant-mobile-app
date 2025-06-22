@@ -1,254 +1,159 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { doc, getDoc } from 'firebase/firestore';
+import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
+    Alert,
     FlatList,
     Image,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View
+    View,
 } from 'react-native';
-import { auth, db } from '../../services/firebase';
-import {
-    MOCK_RECIPES,
-    Recipe,
-    filterRecipesByCuisine,
-    filterRecipesByDietary,
-    filterRecipesByIngredients
-} from '../../services/recipeData';
-
-type RecipeMode = 'normal' | 'loose' | 'surprise';
+import { Recipe } from '../../services/recipeData';
 
 export default function RecipesScreen() {
-  const [mode, setMode] = useState<RecipeMode>('normal');
-  const [ingredients, setIngredients] = useState<string[]>([]);
+  const params = useLocalSearchParams();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [selectedCuisine, setSelectedCuisine] = useState<string>('all');
-  const [selectedDietary, setSelectedDietary] = useState<string>('all');
-  const router = useRouter();
-
-  const cuisines = ['all', 'Asian', 'Italian', 'American', 'Mexican', 'Mediterranean'];
-  const dietaryOptions = ['all', 'vegan', 'vegetarian', 'gluten-free'];
+  const [isLoading, setIsLoading] = useState(false);
+  const [mode, setMode] = useState<'normal' | 'loose' | 'surprise'>('normal');
+  const [ingredients, setIngredients] = useState<string[]>([]);
 
   useEffect(() => {
-    loadUserIngredients();
-  }, []);
-
-  useEffect(() => {
-    if (ingredients.length > 0) {
-      generateRecipes();
-    }
-  }, [ingredients, mode, selectedCuisine, selectedDietary]);
-
-  const loadUserIngredients = async () => {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    try {
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      if (userDoc.exists() && userDoc.data().ingredients) {
-        setIngredients(userDoc.data().ingredients);
+    console.log('📱 Recipes screen mounted with params:', params);
+    if (params.recipes && params.mode && params.ingredients) {
+      try {
+        const parsedRecipes = JSON.parse(params.recipes as string);
+        const parsedIngredients = JSON.parse(params.ingredients as string);
+        const recipeMode = params.mode as 'normal' | 'loose' | 'surprise';
+        
+        console.log('📋 Parsed recipes:', parsedRecipes.length);
+        console.log('🥕 Parsed ingredients:', parsedIngredients);
+        
+        setRecipes(parsedRecipes);
+        setMode(recipeMode);
+        setIngredients(parsedIngredients);
+      } catch (error) {
+        console.error('❌ Error parsing recipe params:', error);
+        Alert.alert('Error', 'Failed to load recipes');
       }
-    } catch (error) {
-      console.error('Error loading ingredients:', error);
+    } else {
+      console.log('⚠️ Missing params:', { recipes: !!params.recipes, mode: !!params.mode, ingredients: !!params.ingredients });
     }
-  };
+  }, [params]);
 
-  const generateRecipes = () => {
-    setLoading(true);
-    
-    // Simulate API call delay
-    setTimeout(() => {
-      let filteredRecipes = [...MOCK_RECIPES];
-
-      // Apply filters
-      filteredRecipes = filterRecipesByCuisine(filteredRecipes, selectedCuisine);
-      filteredRecipes = filterRecipesByDietary(filteredRecipes, selectedDietary);
-      filteredRecipes = filterRecipesByIngredients(filteredRecipes, ingredients, mode);
-
-      setRecipes(filteredRecipes);
-      setLoading(false);
-    }, 1000);
-  };
-
-  const getMissingIngredients = (recipe: Recipe) => {
-    return recipe.ingredients.filter(ingredient =>
-      !ingredients.includes(ingredient.toLowerCase())
-    );
-  };
-
-  const getMatchingIngredients = (recipe: Recipe) => {
-    return recipe.ingredients.filter(ingredient =>
-      ingredients.includes(ingredient.toLowerCase())
-    );
-  };
-
-  const renderRecipe = ({ item }: { item: Recipe }) => {
-    const missingIngredients = getMissingIngredients(item);
-    const matchingIngredients = getMatchingIngredients(item);
-
-    return (
-      <TouchableOpacity
-        style={styles.recipeCard}
-        onPress={() => router.push(`/recipe/${item.id}`)}
-      >
-        <Image source={{ uri: item.image }} style={styles.recipeImage} />
-        <View style={styles.recipeContent}>
-          <Text style={styles.recipeTitle}>{item.title}</Text>
-          <View style={styles.recipeMeta}>
-            <View style={styles.metaItem}>
-              <Ionicons name="time-outline" size={14} color="#666" />
-              <Text style={styles.metaText}>{item.cookTime} min</Text>
-            </View>
-            <View style={styles.metaItem}>
-              <Ionicons name="restaurant-outline" size={14} color="#666" />
-              <Text style={styles.metaText}>{item.cuisine}</Text>
-            </View>
+  const renderRecipeItem = ({ item }: { item: Recipe }) => (
+    <TouchableOpacity
+      style={styles.recipeCard}
+      onPress={() => router.push(`/recipe/${item.id}`)}
+    >
+      <Image
+        source={{ uri: item.image }}
+        style={styles.recipeImage}
+        resizeMode="cover"
+      />
+      
+      <View style={styles.recipeInfo}>
+        <Text style={styles.recipeTitle} numberOfLines={2}>
+          {item.title}
+        </Text>
+        
+        <View style={styles.recipeMeta}>
+          <View style={styles.metaItem}>
+            <Ionicons name="time-outline" size={14} color="#666" />
+            <Text style={styles.metaText}>{item.cookTime} min</Text>
           </View>
           
-          <View style={styles.ingredientsInfo}>
-            <Text style={styles.ingredientsText}>
-              {matchingIngredients.length}/{item.ingredients.length} ingredients match
-            </Text>
-            {missingIngredients.length > 0 && mode !== 'normal' && (
-              <Text style={styles.missingText}>
-                Missing: {missingIngredients.slice(0, 2).join(', ')}
-                {missingIngredients.length > 2 && '...'}
-              </Text>
-            )}
+          <View style={styles.metaItem}>
+            <Ionicons name="restaurant-outline" size={14} color="#666" />
+            <Text style={styles.metaText}>{item.cuisine}</Text>
           </View>
-
-          <View style={styles.tags}>
-            {item.dietary.map(diet => (
-              <View key={diet} style={styles.tag}>
-                <Text style={styles.tagText}>{diet}</Text>
-              </View>
-            ))}
+          
+          <View style={styles.metaItem}>
+            <Ionicons name="star-outline" size={14} color="#666" />
+            <Text style={styles.metaText}>{item.difficulty}</Text>
           </View>
         </View>
-      </TouchableOpacity>
-    );
-  };
 
-  const renderModeButton = (modeName: RecipeMode, label: string, icon: string) => (
-    <TouchableOpacity
-      style={[styles.modeButton, mode === modeName && styles.modeButtonActive]}
-      onPress={() => setMode(modeName)}
-    >
-      <Ionicons 
-        name={icon as any} 
-        size={20} 
-        color={mode === modeName ? '#fff' : '#2f4f2f'} 
-      />
-      <Text style={[styles.modeButtonText, mode === modeName && styles.modeButtonTextActive]}>
-        {label}
-      </Text>
+        <View style={styles.dietaryTags}>
+          {item.dietary.map((diet, index) => (
+            <View key={index} style={styles.dietaryTag}>
+              <Text style={styles.dietaryText}>{diet}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
     </TouchableOpacity>
   );
 
-  const renderFilterButton = (
-    value: string, 
-    label: string, 
-    selectedValue: string, 
-    onSelect: (value: string) => void
-  ) => (
-    <TouchableOpacity
-      style={[styles.filterButton, selectedValue === value && styles.filterButtonActive]}
-      onPress={() => onSelect(value)}
-    >
-      <Text style={[styles.filterButtonText, selectedValue === value && styles.filterButtonTextActive]}>
-        {label}
-      </Text>
-    </TouchableOpacity>
-  );
-
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Find Recipes</Text>
-        <Text style={styles.subtitle}>
-          {ingredients.length > 0 
-            ? `Based on your ${ingredients.length} ingredient${ingredients.length !== 1 ? 's' : ''}`
-            : 'Add ingredients to find recipes'
-          }
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <View style={styles.headerTop}>
+        <Text style={styles.headerTitle}>
+          {mode === 'normal' ? 'Perfect Matches' : 
+           mode === 'loose' ? 'Similar Recipes' : 'Surprise Recipes'}
+        </Text>
+        <Text style={styles.headerSubtitle}>
+          {recipes.length} recipe{recipes.length !== 1 ? 's' : ''} found
         </Text>
       </View>
 
-      {ingredients.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Ionicons name="restaurant-outline" size={64} color="#ccc" />
-          <Text style={styles.emptyText}>No ingredients yet</Text>
-          <Text style={styles.emptySubtext}>
-            Go to the Ingredients tab to add what you have
+      {ingredients.length > 0 && (
+        <View style={styles.ingredientsSummary}>
+          <Text style={styles.ingredientsTitle}>Based on your ingredients:</Text>
+          <View style={styles.ingredientsList}>
+            {ingredients.slice(0, 5).map((ingredient, index) => (
+              <View key={index} style={styles.ingredientChip}>
+                <Text style={styles.ingredientChipText}>{ingredient}</Text>
+              </View>
+            ))}
+            {ingredients.length > 5 && (
+              <Text style={styles.moreIngredients}>+{ingredients.length - 5} more</Text>
+            )}
+          </View>
+        </View>
+      )}
+
+      {mode !== 'normal' && (
+        <View style={styles.modeInfo}>
+          <Ionicons 
+            name={mode === 'loose' ? 'options' : 'sparkles'} 
+            size={16} 
+            color={mode === 'loose' ? '#007AFF' : '#FF6B6B'} 
+          />
+          <Text style={styles.modeInfoText}>
+            {mode === 'loose' 
+              ? 'Showing recipes with similar ingredients' 
+              : 'AI-powered creative suggestions'}
           </Text>
         </View>
-      ) : (
-        <>
-          <View style={styles.modesContainer}>
-            {renderModeButton('normal', 'Normal', 'checkmark-circle')}
-            {renderModeButton('loose', 'Loose', 'add-circle')}
-            {renderModeButton('surprise', 'Surprise', 'sparkles')}
-          </View>
-
-          <View style={styles.filtersContainer}>
-            <Text style={styles.filtersTitle}>Cuisine:</Text>
-            <FlatList
-              data={cuisines}
-              renderItem={({ item }) => renderFilterButton(
-                item, 
-                item === 'all' ? 'All' : item, 
-                selectedCuisine, 
-                setSelectedCuisine
-              )}
-              keyExtractor={(item) => item}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.filtersList}
-            />
-          </View>
-
-          <View style={styles.filtersContainer}>
-            <Text style={styles.filtersTitle}>Dietary:</Text>
-            <FlatList
-              data={dietaryOptions}
-              renderItem={({ item }) => renderFilterButton(
-                item, 
-                item === 'all' ? 'All' : item, 
-                selectedDietary, 
-                setSelectedDietary
-              )}
-              keyExtractor={(item) => item}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.filtersList}
-            />
-          </View>
-
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#2f4f2f" />
-              <Text style={styles.loadingText}>Finding recipes...</Text>
-            </View>
-          ) : (
-            <View style={styles.resultsContainer}>
-              <Text style={styles.resultsTitle}>
-                {recipes.length} recipe{recipes.length !== 1 ? 's' : ''} found
-              </Text>
-              <FlatList
-                data={recipes}
-                renderItem={renderRecipe}
-                keyExtractor={(item) => item.id}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.recipesList}
-              />
-            </View>
-          )}
-        </>
       )}
+    </View>
+  );
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>
+          {mode === 'normal' ? 'Finding perfect matches...' :
+           mode === 'loose' ? 'Finding similar recipes...' : 'Getting creative suggestions...'}
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <FlatList
+        data={recipes}
+        renderItem={renderRecipeItem}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={renderHeader}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.listContainer}
+      />
     </View>
   );
 }
@@ -256,149 +161,125 @@ export default function RecipesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FDF9EC',
-    padding: 16,
-  },
-  header: {
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2f4f2f',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyText: {
-    fontSize: 20,
-    color: '#999',
-    marginTop: 16,
-  },
-  emptySubtext: {
-    fontSize: 16,
-    color: '#ccc',
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  modesContainer: {
-    flexDirection: 'row',
-    marginBottom: 20,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 4,
-  },
-  modeButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-  },
-  modeButtonActive: {
-    backgroundColor: '#2f4f2f',
-  },
-  modeButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2f4f2f',
-    marginLeft: 4,
-  },
-  modeButtonTextActive: {
-    color: '#fff',
-  },
-  filtersContainer: {
-    marginBottom: 16,
-  },
-  filtersTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2f4f2f',
-    marginBottom: 8,
-  },
-  filtersList: {
-    maxHeight: 40,
-  },
-  filterButton: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  filterButtonActive: {
-    backgroundColor: '#2f4f2f',
-    borderColor: '#2f4f2f',
-  },
-  filterButtonText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  filterButtonTextActive: {
-    color: '#fff',
+    backgroundColor: '#f8f9fa',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#f8f9fa',
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
     color: '#666',
+    textAlign: 'center',
   },
-  resultsContainer: {
-    flex: 1,
+  listContainer: {
+    padding: 16,
   },
-  resultsTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2f4f2f',
+  header: {
+    marginBottom: 20,
+  },
+  headerTop: {
     marginBottom: 16,
   },
-  recipesList: {
-    paddingBottom: 20,
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    marginBottom: 4,
   },
-  recipeCard: {
-    backgroundColor: '#fff',
+  headerSubtitle: {
+    fontSize: 16,
+    color: '#7f8c8d',
+  },
+  ingredientsSummary: {
+    backgroundColor: 'white',
+    padding: 16,
     borderRadius: 12,
     marginBottom: 16,
-    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
+  ingredientsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 8,
+  },
+  ingredientsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+  },
+  ingredientChip: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginRight: 6,
+    marginBottom: 4,
+  },
+  ingredientChipText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  moreIngredients: {
+    fontSize: 12,
+    color: '#7f8c8d',
+    fontStyle: 'italic',
+  },
+  modeInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    padding: 12,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  modeInfoText: {
+    fontSize: 14,
+    color: '#7f8c8d',
+    marginLeft: 8,
+    flex: 1,
+  },
+  recipeCard: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    overflow: 'hidden',
+  },
   recipeImage: {
     width: '100%',
     height: 200,
-    resizeMode: 'cover',
   },
-  recipeContent: {
+  recipeInfo: {
     padding: 16,
   },
   recipeTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2f4f2f',
-    marginBottom: 8,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 12,
+    lineHeight: 24,
   },
   recipeMeta: {
     flexDirection: 'row',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   metaItem: {
     flexDirection: 'row',
@@ -410,33 +291,21 @@ const styles = StyleSheet.create({
     color: '#666',
     marginLeft: 4,
   },
-  ingredientsInfo: {
-    marginBottom: 12,
-  },
-  ingredientsText: {
-    fontSize: 14,
-    color: '#2f4f2f',
-    fontWeight: '500',
-  },
-  missingText: {
-    fontSize: 12,
-    color: '#ff6b6b',
-    marginTop: 2,
-  },
-  tags: {
+  dietaryTags: {
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
-  tag: {
-    backgroundColor: '#f0f0f0',
-    borderRadius: 12,
+  dietaryTag: {
+    backgroundColor: '#e8f5e8',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    marginRight: 8,
+    borderRadius: 12,
+    marginRight: 6,
     marginBottom: 4,
   },
-  tagText: {
+  dietaryText: {
     fontSize: 12,
-    color: '#666',
+    color: '#2d5a2d',
+    fontWeight: '500',
   },
 }); 

@@ -1,9 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import {
-    doc,
-    getDoc,
-    setDoc
-} from 'firebase/firestore';
+import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -15,202 +11,259 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { auth, db } from '../../services/firebase';
+import { apiService, Ingredient } from '../../services/apiService';
+import { getIngredientsFromFirebase, saveIngredientsToFirebase } from '../../services/firebase';
 
-// Common ingredients for autocomplete
-const COMMON_INGREDIENTS = [
-  'chicken', 'beef', 'pork', 'salmon', 'shrimp', 'eggs', 'milk', 'cheese',
-  'butter', 'olive oil', 'onion', 'garlic', 'tomato', 'potato', 'carrot',
-  'broccoli', 'spinach', 'lettuce', 'bell pepper', 'mushroom', 'rice',
-  'pasta', 'bread', 'flour', 'sugar', 'salt', 'pepper', 'basil', 'oregano',
-  'lemon', 'lime', 'apple', 'banana', 'strawberry', 'blueberry', 'avocado',
-  'cucumber', 'celery', 'corn', 'peas', 'beans', 'lentils', 'chickpeas',
-  'almonds', 'walnuts', 'peanut butter', 'honey', 'maple syrup', 'vinegar',
-  'soy sauce', 'ketchup', 'mustard', 'mayonnaise', 'sour cream', 'yogurt'
-];
-
-export default function IngredientsScreen() {
+export default function IngredientInputScreen() {
   const [ingredients, setIngredients] = useState<string[]>([]);
-  const [inputValue, setInputValue] = useState('');
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState(auth.currentUser);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Ingredient[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      setUser(user);
-      if (user) {
-        loadUserIngredients(user.uid);
-      }
-    });
-
-    return unsubscribe;
+    loadSavedIngredients();
   }, []);
 
-  const loadUserIngredients = async (userId: string) => {
+  useEffect(() => {
+    if (searchQuery.length > 2) {
+      searchIngredients();
+    } else {
+      setSearchResults([]);
+    }
+  }, [searchQuery]);
+
+  const loadSavedIngredients = async () => {
     try {
-      setLoading(true);
-      const userDoc = await getDoc(doc(db, 'users', userId));
-      if (userDoc.exists() && userDoc.data().ingredients) {
-        setIngredients(userDoc.data().ingredients);
+      const savedIngredients = await getIngredientsFromFirebase();
+      if (savedIngredients.length > 0) {
+        setIngredients(savedIngredients);
       }
     } catch (error) {
-      console.error('Error loading ingredients:', error);
-      Alert.alert('Error', 'Failed to load your ingredients');
-    } finally {
-      setLoading(false);
+      console.error('Error loading saved ingredients:', error);
     }
   };
 
-  const saveIngredients = async (newIngredients: string[]) => {
-    if (!user) return;
-    
+  const searchIngredients = async () => {
+    if (searchQuery.length < 3) return;
+
+    setIsSearching(true);
     try {
-      await setDoc(doc(db, 'users', user.uid), {
-        ingredients: newIngredients,
-        updatedAt: new Date(),
-      }, { merge: true });
+      const results = await apiService.searchIngredients(searchQuery, 10);
+      setSearchResults(results);
     } catch (error) {
-      console.error('Error saving ingredients:', error);
-      Alert.alert('Error', 'Failed to save ingredients');
+      console.error('Error searching ingredients:', error);
+      Alert.alert('Error', 'Failed to search ingredients. Please try again.');
+    } finally {
+      setIsSearching(false);
     }
   };
 
-  const handleInputChange = (text: string) => {
-    setInputValue(text);
-    if (text.length >= 2) {
-      const filtered = COMMON_INGREDIENTS.filter(ingredient =>
-        ingredient.toLowerCase().includes(text.toLowerCase()) &&
-        !ingredients.includes(ingredient.toLowerCase())
-      );
-      setSuggestions(filtered.slice(0, 5));
-    } else {
-      setSuggestions([]);
-    }
-  };
-
-  const addIngredient = async (ingredient: string) => {
+  const addIngredient = (ingredient: string) => {
     const normalizedIngredient = ingredient.toLowerCase().trim();
-    
-    if (normalizedIngredient.length < 2) {
-      Alert.alert('Invalid Input', 'Ingredient name must be at least 2 characters');
-      return;
+    if (!ingredients.includes(normalizedIngredient)) {
+      const newIngredients = [...ingredients, normalizedIngredient];
+      setIngredients(newIngredients);
+      saveIngredientsToFirebase(newIngredients);
     }
-
-    if (ingredients.includes(normalizedIngredient)) {
-      Alert.alert('Duplicate', 'This ingredient is already in your list');
-      return;
-    }
-
-    const newIngredients = [...ingredients, normalizedIngredient];
-    setIngredients(newIngredients);
-    setInputValue('');
-    setSuggestions([]);
-    
-    if (user) {
-      await saveIngredients(newIngredients);
-    }
+    setSearchQuery('');
+    setSearchResults([]);
   };
 
-  const removeIngredient = async (ingredient: string) => {
+  const removeIngredient = (ingredient: string) => {
     const newIngredients = ingredients.filter(i => i !== ingredient);
     setIngredients(newIngredients);
+    saveIngredientsToFirebase(newIngredients);
+  };
+
+  const generateRecipes = async (mode: 'normal' | 'loose' | 'surprise') => {
+    console.log('🚀 generateRecipes called with mode:', mode);
+    console.log('📝 Current ingredients:', ingredients);
     
-    if (user) {
-      await saveIngredients(newIngredients);
+    if (ingredients.length === 0) {
+      console.log('❌ No ingredients found');
+      Alert.alert('No Ingredients', 'Please add some ingredients first.');
+      return;
+    }
+
+    console.log('⏳ Setting loading state...');
+    setIsLoading(true);
+    
+    try {
+      console.log('🔍 Calling apiService.searchRecipesByIngredients...');
+      // Use API service for recipe matching
+      const recipes = await apiService.searchRecipesByIngredients(ingredients, mode);
+      
+      console.log('📊 Recipes found:', recipes.length);
+      
+      if (recipes.length === 0) {
+        console.log('❌ No recipes found');
+        Alert.alert(
+          'No Recipes Found',
+          'No recipes found with your ingredients. Try adding more ingredients or using a different mode.',
+          [
+            { text: 'Add More Ingredients', onPress: () => {} },
+            { text: 'Try Loose Mode', onPress: () => generateRecipes('loose') },
+            { text: 'Cancel', style: 'cancel' }
+          ]
+        );
+        return;
+      }
+
+      console.log('🧭 Navigating to recipes screen...');
+      // Navigate to recipes screen with the found recipes
+      router.push({
+        pathname: '/recipes',
+        params: { 
+          recipes: JSON.stringify(recipes),
+          mode: mode,
+          ingredients: JSON.stringify(ingredients)
+        }
+      });
+    } catch (error) {
+      console.error('❌ Error generating recipes:', error);
+      Alert.alert('Error', 'Failed to generate recipes. Please try again.');
+    } finally {
+      console.log('✅ Clearing loading state...');
+      setIsLoading(false);
     }
   };
 
-  const renderIngredient = ({ item }: { item: string }) => (
-    <View style={styles.ingredientItem}>
+  const renderIngredientItem = ({ item }: { item: Ingredient }) => (
+    <TouchableOpacity
+      style={styles.searchResultItem}
+      onPress={() => addIngredient(item.name)}
+    >
+      <Text style={styles.searchResultText}>{item.name}</Text>
+      {item.category && (
+        <Text style={styles.searchResultCategory}>{item.category}</Text>
+      )}
+    </TouchableOpacity>
+  );
+
+  const renderAddedIngredient = ({ item }: { item: string }) => (
+    <View style={styles.ingredientTag}>
       <Text style={styles.ingredientText}>{item}</Text>
       <TouchableOpacity
         onPress={() => removeIngredient(item)}
         style={styles.removeButton}
       >
-        <Ionicons name="close-circle" size={20} color="#ff6b6b" />
+        <Ionicons name="close-circle" size={16} color="#ff6b6b" />
       </TouchableOpacity>
     </View>
   );
 
-  const renderSuggestion = ({ item }: { item: string }) => (
-    <TouchableOpacity
-      style={styles.suggestionItem}
-      onPress={() => addIngredient(item)}
-    >
-      <Text style={styles.suggestionText}>{item}</Text>
-      <Ionicons name="add" size={16} color="#2f4f2f" />
-    </TouchableOpacity>
-  );
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2f4f2f" />
-        <Text style={styles.loadingText}>Loading your ingredients...</Text>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>My Ingredients</Text>
+        <Text style={styles.title}>What's in your kitchen?</Text>
         <Text style={styles.subtitle}>
-          {ingredients.length} ingredient{ingredients.length !== 1 ? 's' : ''} • 
-          {ingredients.length > 0 ? ' You can make recipes!' : ' Add some ingredients to get started'}
+          Add ingredients you have and we'll find recipes for you
         </Text>
       </View>
 
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Add an ingredient..."
-          value={inputValue}
-          onChangeText={handleInputChange}
-          onSubmitEditing={() => addIngredient(inputValue)}
-        />
-        {inputValue.length > 0 && (
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => addIngredient(inputValue)}
-          >
-            <Ionicons name="add" size={24} color="#fff" />
-          </TouchableOpacity>
+      <View style={styles.searchContainer}>
+        <View style={styles.searchInputContainer}>
+          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search for ingredients..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {isSearching && (
+            <ActivityIndicator size="small" color="#007AFF" style={styles.searchLoader} />
+          )}
+        </View>
+
+        {searchResults.length > 0 && (
+          <View style={styles.searchResults}>
+            <FlatList
+              data={searchResults}
+              renderItem={renderIngredientItem}
+              keyExtractor={(item) => item.id}
+              style={styles.searchResultsList}
+            />
+          </View>
         )}
       </View>
 
-      {suggestions.length > 0 && (
-        <View style={styles.suggestionsContainer}>
-          <Text style={styles.suggestionsTitle}>Suggestions:</Text>
+      {ingredients.length > 0 && (
+        <View style={styles.ingredientsContainer}>
+          <Text style={styles.ingredientsTitle}>Your Ingredients ({ingredients.length})</Text>
           <FlatList
-            data={suggestions}
-            renderItem={renderSuggestion}
+            data={ingredients}
+            renderItem={renderAddedIngredient}
             keyExtractor={(item) => item}
             horizontal
             showsHorizontalScrollIndicator={false}
-            style={styles.suggestionsList}
+            style={styles.ingredientsList}
           />
         </View>
       )}
 
-      <View style={styles.ingredientsContainer}>
-        <Text style={styles.sectionTitle}>Your Ingredients:</Text>
-        {ingredients.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="restaurant-outline" size={48} color="#ccc" />
-            <Text style={styles.emptyText}>No ingredients yet</Text>
-            <Text style={styles.emptySubtext}>Add ingredients to start finding recipes</Text>
-          </View>
-        ) : (
-          <FlatList
-            data={ingredients}
-            renderItem={renderIngredient}
-            keyExtractor={(item) => item}
-            style={styles.ingredientsList}
-            showsVerticalScrollIndicator={false}
-          />
-        )}
+      <View style={styles.actionsContainer}>
+        <TouchableOpacity
+          style={[styles.generateButton, styles.normalButton]}
+          onPress={() => {
+            console.log('🔘 Find Recipes button pressed!');
+            generateRecipes('normal');
+          }}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <>
+              <Ionicons name="restaurant" size={20} color="white" />
+              <Text style={styles.generateButtonText}>Find Recipes</Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        <View style={styles.modeButtonsContainer}>
+          <TouchableOpacity
+            style={[styles.modeButton, styles.looseButton]}
+            onPress={() => {
+              console.log('🔘 Loose Match button pressed!');
+              generateRecipes('loose');
+            }}
+            disabled={isLoading}
+          >
+            <Ionicons name="options" size={16} color="#007AFF" />
+            <Text style={styles.modeButtonText}>Loose Match</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.modeButton, styles.surpriseButton]}
+            onPress={() => {
+              console.log('🔘 Surprise Me button pressed!');
+              generateRecipes('surprise');
+            }}
+            disabled={isLoading}
+          >
+            <Ionicons name="sparkles" size={16} color="#FF6B6B" />
+            <Text style={styles.modeButtonText}>Surprise Me!</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.infoContainer}>
+        <Text style={styles.infoTitle}>How it works:</Text>
+        <View style={styles.infoItem}>
+          <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
+          <Text style={styles.infoText}>Find Recipes: Uses your exact ingredients</Text>
+        </View>
+        <View style={styles.infoItem}>
+          <Ionicons name="options" size={16} color="#007AFF" />
+          <Text style={styles.infoText}>Loose Match: Suggests recipes with similar ingredients</Text>
+        </View>
+        <View style={styles.infoItem}>
+          <Ionicons name="sparkles" size={16} color="#FF6B6B" />
+          <Text style={styles.infoText}>Surprise Me: AI-powered creative suggestions</Text>
+        </View>
       </View>
     </View>
   );
@@ -219,130 +272,188 @@ export default function IngredientsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FDF9EC',
-    padding: 16,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FDF9EC',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
+    backgroundColor: '#f8f9fa',
+    padding: 20,
   },
   header: {
-    marginBottom: 24,
+    marginBottom: 30,
+    marginTop: 20,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#2f4f2f',
+    color: '#2c3e50',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: '#7f8c8d',
+    lineHeight: 22,
   },
-  inputContainer: {
+  searchContainer: {
+    marginBottom: 20,
+  },
+  searchInputContainer: {
     flexDirection: 'row',
-    marginBottom: 16,
-  },
-  input: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  searchIcon: {
+    marginRight: 12,
+  },
+  searchInput: {
+    flex: 1,
     fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    marginRight: 8,
+    color: '#2c3e50',
   },
-  addButton: {
-    backgroundColor: '#2f4f2f',
-    borderRadius: 8,
-    padding: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+  searchLoader: {
+    marginLeft: 8,
   },
-  suggestionsContainer: {
-    marginBottom: 24,
+  searchResults: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    marginTop: 8,
+    maxHeight: 200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  suggestionsTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 8,
+  searchResultsList: {
+    borderRadius: 12,
   },
-  suggestionsList: {
-    maxHeight: 40,
+  searchResultItem: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f2f6',
   },
-  suggestionItem: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginRight: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+  searchResultText: {
+    fontSize: 16,
+    color: '#2c3e50',
+    fontWeight: '500',
   },
-  suggestionText: {
-    fontSize: 14,
-    color: '#2f4f2f',
-    marginRight: 4,
+  searchResultCategory: {
+    fontSize: 12,
+    color: '#7f8c8d',
+    marginTop: 2,
   },
   ingredientsContainer: {
-    flex: 1,
+    marginBottom: 30,
   },
-  sectionTitle: {
+  ingredientsTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#2f4f2f',
+    color: '#2c3e50',
     marginBottom: 12,
   },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyText: {
-    fontSize: 18,
-    color: '#999',
-    marginTop: 16,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#ccc',
-    marginTop: 8,
-    textAlign: 'center',
-  },
   ingredientsList: {
-    flex: 1,
+    flexGrow: 0,
   },
-  ingredientItem: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 8,
+  ingredientTag: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
   },
   ingredientText: {
-    fontSize: 16,
-    color: '#2f4f2f',
-    flex: 1,
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
+    marginRight: 6,
   },
   removeButton: {
-    padding: 4,
+    marginLeft: 4,
+  },
+  actionsContainer: {
+    marginBottom: 30,
+  },
+  generateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  normalButton: {
+    backgroundColor: '#007AFF',
+  },
+  generateButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  modeButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    flex: 0.48,
+  },
+  looseButton: {
+    backgroundColor: 'white',
+    borderColor: '#007AFF',
+  },
+  surpriseButton: {
+    backgroundColor: 'white',
+    borderColor: '#FF6B6B',
+  },
+  modeButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+  infoContainer: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  infoTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 12,
+  },
+  infoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#7f8c8d',
+    marginLeft: 8,
+    flex: 1,
   },
 }); 
