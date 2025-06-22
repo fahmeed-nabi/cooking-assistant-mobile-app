@@ -1,53 +1,239 @@
-# cooking-assistant-mobile-app
-A mobile app for students that generates recipes based on ingredients they already have, with three smart suggestion modes and Firebase integration.
+# MealMatch - Cooking Assistant Mobile App
 
-# Welcome to your Expo app 👋
+A React Native mobile application that helps users discover recipes based on ingredients they already have at home. Built with Expo, Firebase, and TypeScript.
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## 🍳 Features
 
-## Get started
+### Core Features
+- **Ingredient Management**: Add, edit, and remove ingredients from your personal inventory
+- **Recipe Discovery**: Find recipes based on your available ingredients
+- **Three Recipe Modes**:
+  - **Normal**: Uses only ingredients you have (100% match)
+  - **Loose**: Allows up to 3 additional ingredients
+  - **Surprise Me**: Creative recipes with at least 2 matching ingredients
+- **Recipe Details**: Full instructions, ingredients list, and cooking information
+- **Save Favorites**: Save recipes you like for future reference
+- **User Authentication**: Sign up, sign in, and manage your account
+- **Filtering**: Filter recipes by cuisine and dietary preferences
 
-1. Install dependencies
+### User Experience
+- **Guest Mode**: Browse recipes without creating an account
+- **Autocomplete**: Smart ingredient suggestions as you type
+- **Visual Feedback**: See which ingredients you have vs. missing
+- **Responsive Design**: Optimized for mobile devices
+- **Offline Support**: Basic functionality works without internet
 
+## 🛠 Tech Stack
+
+- **Frontend**: React Native with Expo
+- **Navigation**: Expo Router
+- **Backend**: Firebase (Authentication & Firestore)
+- **Language**: TypeScript
+- **UI Components**: React Native + Expo Vector Icons
+- **State Management**: React Hooks
+- **Styling**: StyleSheet API
+
+## 📱 Screens
+
+1. **Welcome Screen**: App introduction and authentication options
+2. **Authentication**: Sign in and sign up screens
+3. **Ingredients Tab**: Manage your ingredient inventory
+4. **Recipes Tab**: Discover recipes with filtering and modes
+5. **Saved Recipes Tab**: View your favorite recipes
+6. **Profile Tab**: User account management and stats
+7. **Recipe Detail**: Full recipe information and save functionality
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js (v16 or higher)
+- npm or yarn
+- Expo CLI
+- Android Studio (for Android development)
+- Xcode (for iOS development, macOS only)
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd cooking-assistant-mobile-app
+   ```
+
+2. **Install dependencies**
    ```bash
    npm install
    ```
 
-2. Start the app
+3. **Set up Firebase**
+   - Create a Firebase project at [Firebase Console](https://console.firebase.google.com/)
+   - Enable Authentication (Email/Password)
+   - Create a Firestore database
+   - Update `constants/firebaseConfig.js` with your Firebase configuration
 
+4. **Start the development server**
    ```bash
-   npx expo start`   
+   npm start
    ```
 
-In the output, you'll find options to open the app in a
+5. **Run on device/simulator**
+   ```bash
+   # For Android
+   npm run android
+   
+   # For iOS
+   npm run ios
+   
+   # For web
+   npm run web
+   ```
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## 📊 Project Structure
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+cooking-assistant-mobile-app/
+├── app/                    # Main application screens
+│   ├── (tabs)/            # Tab navigation screens
+│   │   ├── index.tsx      # Ingredients screen
+│   │   ├── recipes.tsx    # Recipe discovery
+│   │   ├── saved.tsx      # Saved recipes
+│   │   └── profile.tsx    # User profile
+│   ├── recipe/            # Recipe detail screens
+│   ├── login.tsx          # Authentication
+│   ├── signup.tsx         # User registration
+│   └── _layout.tsx        # Root layout
+├── services/              # Business logic and data
+│   ├── firebase.js        # Firebase configuration
+│   └── recipeData.ts      # Recipe data and utilities
+├── constants/             # Configuration files
+│   └── firebaseConfig.js  # Firebase config
+├── assets/                # Static assets
+└── package.json           # Dependencies and scripts
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## 🔧 Configuration
 
-## Learn more
+### Firebase Setup
+1. Create a new Firebase project
+2. Enable Authentication with Email/Password provider
+3. Create a Firestore database
+4. Set up security rules for Firestore
+5. Update the Firebase configuration in `constants/firebaseConfig.js`
 
-To learn more about developing your project with Expo, look at the following resources:
+### Environment Variables
+Create a `.env` file in the root directory:
+```env
+FIREBASE_API_KEY=your_api_key
+FIREBASE_AUTH_DOMAIN=your_auth_domain
+FIREBASE_PROJECT_ID=your_project_id
+FIREBASE_STORAGE_BUCKET=your_storage_bucket
+FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+FIREBASE_APP_ID=your_app_id
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## 📋 Business Rules
 
-## Join the community
+### Ingredients
+- Minimum 2 characters required
+- Stored in lowercase
+- No duplicates per user
+- Case-insensitive matching
 
-Join our community of developers creating universal apps.
+### Recipes
+- Generated based on user ingredients
+- Three matching modes (Normal, Loose, Surprise)
+- Filterable by cuisine and dietary preferences
+- Save/unsave functionality for authenticated users
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### Authentication
+- Email/password authentication
+- Guest mode available for basic features
+- User data persisted in Firestore
+
+## 🎨 Design System
+
+### Colors
+- Primary: `#2f4f2f` (Dark Green)
+- Background: `#FDF9EC` (Cream)
+- Text: `#2f4f2f` (Dark Green)
+- Secondary Text: `#666` (Gray)
+- Accent: `#ff6b6b` (Coral Red)
+
+### Typography
+- Headers: Bold, 24-28px
+- Body: Regular, 16px
+- Captions: Regular, 14px
+
+## 🧪 Testing
+
+### Manual Testing Checklist
+- [ ] User registration and login
+- [ ] Ingredient addition and removal
+- [ ] Recipe discovery in all three modes
+- [ ] Recipe filtering by cuisine and dietary
+- [ ] Recipe saving and unsaving
+- [ ] Navigation between screens
+- [ ] Guest mode functionality
+- [ ] Error handling and validation
+
+## 📦 Building for Production
+
+### Android APK
+```bash
+expo build:android
+```
+
+### iOS IPA
+```bash
+expo build:ios
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+## 👥 Team
+
+**Team 2:**
+- Fahmeed Nabi
+- Zarar
+
+**Course:** CS 4720  
+**Professor:** Daniel Graham  
+**Due Date:** 10 July 2025
+
+## 🔮 Future Enhancements
+
+### Stretch Features
+- **Image Recognition**: Take photos of ingredients for automatic detection
+- **Shopping List**: Generate shopping lists based on missing ingredients
+- **Recipe Ratings**: Rate and review saved recipes
+- **Meal Planning**: Plan meals for the week
+- **Nutritional Information**: Display nutritional facts for recipes
+- **Social Features**: Share recipes with friends
+
+### Technical Improvements
+- **Real Recipe API**: Integrate with Spoonacular or similar API
+- **Offline Database**: Local storage for offline functionality
+- **Push Notifications**: Reminders for meal planning
+- **Performance Optimization**: Image caching and lazy loading
+- **Accessibility**: Screen reader support and accessibility features
+
+## 🐛 Known Issues
+
+- Mock recipe data is limited (8 recipes)
+- No real-time ingredient synchronization
+- Basic error handling
+- Limited offline functionality
+
+## 📞 Support
+
+For questions or issues, please contact the development team or create an issue in the repository.
