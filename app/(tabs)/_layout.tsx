@@ -22,6 +22,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
+          headerShown: false,
           title: 'Ingredients',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="restaurant" size={size} color={color} />
@@ -31,6 +32,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="recipes"
         options={{
+          headerShown: false,
           title: 'Recipes',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="book" size={size} color={color} />
@@ -40,6 +42,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="saved"
         options={{
+          headerShown: false,
           title: 'Saved',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="heart" size={size} color={color} />
@@ -49,6 +52,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
+          headerShown: false,
           title: 'Profile',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />

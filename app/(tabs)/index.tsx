@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -256,7 +257,7 @@ export default function IngredientInputScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
       <View style={styles.header}>
         <Text style={styles.title}>What's in your kitchen?</Text>
         <Text style={styles.subtitle}>
@@ -369,7 +370,7 @@ export default function IngredientInputScreen() {
           <Text style={styles.infoText}>Surprise Me: AI-powered creative suggestions</Text>
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
