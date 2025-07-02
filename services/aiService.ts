@@ -466,32 +466,27 @@ class AIService {
     };
   }
 
-  async generateRecipe(ingredients: string[]): Promise<Recipe | null> {
+  async generateRecipe(
+    ingredients: string[],
+    cuisines: string[] = [],
+    dietary: string[] = []
+  ): Promise<Recipe | null> {
     if (!API_CONFIG.GEMINI_API_KEY || API_CONFIG.GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY') {
-      console.log('🤖 Gemini API key not found, returning null');
       return null;
     }
 
     const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-    const prompt = this.createRecipePrompt(ingredients);
+    const prompt = this.createRecipePrompt(ingredients, cuisines, dietary);
 
     try {
-      console.log('🧠 Calling Gemini API...');
       const result = await model.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
-      
-      console.log('✅ Gemini response received');
-      
       const recipeJson = this.parseRecipeJson(text);
-      
-      // Add a unique ID and default image to the AI-generated recipe
       recipeJson.id = `ai-${Date.now()}`;
-      recipeJson.image = `https://images.unsplash.com/photo-1542010589005-d1eacc3918f2?w=400`; // Default image
-
+      recipeJson.image = `https://images.unsplash.com/photo-1542010589005-d1eacc3918f2?w=400`;
       return recipeJson as Recipe;
     } catch (error) {
-      console.error('❌ Error generating recipe with AI:', error);
       return null;
     }
   }
@@ -516,11 +511,17 @@ class AIService {
     }
   }
 
-  private createRecipePrompt(ingredients: string[]): string {
+  private createRecipePrompt(
+    ingredients: string[],
+    cuisines: string[] = [],
+    dietary: string[] = []
+  ): string {
     return `
       You are a creative chef and culinary expert. Your task is to invent a unique and delicious recipe based on a given list of ingredients.
 
       Ingredients provided: ${ingredients.join(', ')}
+      Preferred cuisines: ${cuisines.length > 0 ? cuisines.join(', ') : 'Any'}
+      Dietary restrictions: ${dietary.length > 0 ? dietary.join(', ') : 'None'}
 
       Your response MUST be a single, valid JSON object that follows this exact structure:
       \`\`\`json

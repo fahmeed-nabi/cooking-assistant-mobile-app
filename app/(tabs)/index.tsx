@@ -2,17 +2,37 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { apiService, Ingredient } from '../../services/apiService';
 import { getIngredientsFromFirebase, saveIngredientsToFirebase } from '../../services/firebase';
+
+const DIETARY_OPTIONS = [
+  'vegetarian',
+  'vegan',
+  'gluten-free',
+];
+const CUISINES = [
+  'italian',
+  'mexican',
+  'chinese',
+  'indian',
+  'french',
+  'japanese',
+  'thai',
+  'mediterranean',
+  'american',
+  'middle eastern',
+  'spanish',
+  'korean',
+];
 
 export default function IngredientInputScreen() {
   const [ingredients, setIngredients] = useState<string[]>([]);
@@ -20,6 +40,8 @@ export default function IngredientInputScreen() {
   const [searchResults, setSearchResults] = useState<Ingredient[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
+  const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
 
   useEffect(() => {
     loadSavedIngredients();
@@ -92,7 +114,11 @@ export default function IngredientInputScreen() {
     try {
       console.log('🔍 Calling apiService.searchRecipesByIngredients...');
       // Use API service for recipe matching
-      const recipes = await apiService.searchRecipesByIngredients(ingredients, mode);
+      const recipes = await apiService.searchRecipesByIngredients(
+        ingredients, 
+        mode, 
+        selectedCuisines, 
+        selectedDietary);
       
       console.log('📊 Recipes found:', recipes.length);
       
@@ -117,7 +143,9 @@ export default function IngredientInputScreen() {
         params: { 
           recipes: JSON.stringify(recipes),
           mode: mode,
-          ingredients: JSON.stringify(ingredients)
+          ingredients: JSON.stringify(ingredients),
+          cuisines: JSON.stringify(selectedCuisines),
+          dietary: JSON.stringify(selectedDietary),
         }
       });
     } catch (error) {
@@ -128,6 +156,80 @@ export default function IngredientInputScreen() {
       setIsLoading(false);
     }
   };
+
+  // UI for cuisine and dietary filters
+  const renderFilters = () => (
+    <View style={{ marginBottom: 20 }}>
+      <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 8 }}>FILTERS</Text>
+      <Text style={{ fontWeight: '600', marginBottom: 4 }}>Cuisine</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 }}>
+        {CUISINES.map(cuisine => (
+          <TouchableOpacity
+            key={cuisine}
+            style={{
+              backgroundColor: selectedCuisines.includes(cuisine) ? '#007AFF' : '#e0e0e0',
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 16,
+              marginRight: 8,
+              marginBottom: 8,
+            }}
+            onPress={() => {
+              setSelectedCuisines(prev =>
+                prev.includes(cuisine)
+                  ? prev.filter(c => c !== cuisine)
+                  : [...prev, cuisine]
+              );
+            }}
+          >
+            <Text style={{ color: selectedCuisines.includes(cuisine) ? 'white' : '#333' }}>
+              {cuisine}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <Text style={{ fontWeight: '600', marginBottom: 4 }}>Dietary Preferences</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+        {DIETARY_OPTIONS.map(option => (
+          <TouchableOpacity
+            key={option}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              marginRight: 16,
+              marginBottom: 8,
+            }}
+            onPress={() => {
+              setSelectedDietary(prev =>
+                prev.includes(option)
+                  ? prev.filter(d => d !== option)
+                  : [...prev, option]
+              );
+            }}
+          >
+            <View
+              style={{
+                width: 20,
+                height: 20,
+                borderRadius: 4,
+                borderWidth: 1,
+                borderColor: '#007AFF',
+                backgroundColor: selectedDietary.includes(option) ? '#007AFF' : 'white',
+                marginRight: 6,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            >
+              {selectedDietary.includes(option) && (
+                <Ionicons name="checkmark" size={16} color="white" />
+              )}
+            </View>
+            <Text style={{ color: '#333' }}>{option}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
 
   const renderIngredientItem = ({ item }: { item: Ingredient }) => (
     <TouchableOpacity
@@ -203,6 +305,8 @@ export default function IngredientInputScreen() {
           />
         </View>
       )}
+
+      {renderFilters()}
 
       <View style={styles.actionsContainer}>
         <TouchableOpacity
