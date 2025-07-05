@@ -60,11 +60,11 @@ class AIService {
       allowed: ['vegetables', 'fruits', 'grains', 'nuts', 'seeds', 'legumes'],
       forbidden: ['meat', 'fish', 'poultry', 'dairy', 'eggs', 'honey']
     },
-    'gluten-free': {
+    'gluten free': {
       allowed: ['rice', 'quinoa', 'corn', 'potato', 'vegetables', 'fruits', 'meat', 'fish'],
       forbidden: ['wheat', 'barley', 'rye', 'bread', 'pasta', 'flour']
     },
-    'dairy-free': {
+    'dairy free': {
       allowed: ['vegetables', 'fruits', 'grains', 'meat', 'fish', 'nuts', 'seeds'],
       forbidden: ['milk', 'cheese', 'yogurt', 'butter', 'cream']
     },

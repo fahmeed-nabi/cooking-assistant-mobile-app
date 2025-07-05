@@ -93,9 +93,30 @@ export default function RecipesScreen() {
   const renderHeader = () => (
     <View style={styles.header}>
       <View style={styles.headerTop}>
+        <Ionicons
+          name={
+            mode === 'normal'
+              ? 'restaurant'
+              : mode === 'loose'
+              ? 'options'
+              : 'sparkles'
+          }
+          size={32}
+          color={
+            mode === 'normal'
+              ? '#007AFF'
+              : mode === 'loose'
+              ? '#007AFF'
+              : '#FF6B6B'
+          }
+          style={{ marginBottom: 8 }}
+        />
         <Text style={styles.headerTitle}>
-          {mode === 'normal' ? 'Perfect Matches' : 
-           mode === 'loose' ? 'Similar Recipes' : 'Surprise Recipes'}
+          {mode === 'normal'
+            ? 'Perfect Matches'
+            : mode === 'loose'
+            ? 'Similar Recipes'
+            : 'Surprise Recipes'}
         </Text>
         <Text style={styles.headerSubtitle}>
           {recipes.length} recipe{recipes.length !== 1 ? 's' : ''} found
@@ -108,6 +129,7 @@ export default function RecipesScreen() {
           <View style={styles.ingredientsList}>
             {ingredients.slice(0, 5).map((ingredient, index) => (
               <View key={index} style={styles.ingredientChip}>
+                <Ionicons name="ellipse" size={10} color="#fff" style={{ marginRight: 4 }} />
                 <Text style={styles.ingredientChipText}>{ingredient}</Text>
               </View>
             ))}
@@ -120,14 +142,14 @@ export default function RecipesScreen() {
 
       {mode !== 'normal' && (
         <View style={styles.modeInfo}>
-          <Ionicons 
-            name={mode === 'loose' ? 'options' : 'sparkles'} 
-            size={16} 
-            color={mode === 'loose' ? '#007AFF' : '#FF6B6B'} 
+          <Ionicons
+            name={mode === 'loose' ? 'options' : 'sparkles'}
+            size={18}
+            color={mode === 'loose' ? '#007AFF' : '#FF6B6B'}
           />
           <Text style={styles.modeInfoText}>
-            {mode === 'loose' 
-              ? 'Showing recipes with similar ingredients' 
+            {mode === 'loose'
+              ? 'Showing recipes with similar ingredients'
               : 'AI-powered creative suggestions'}
           </Text>
         </View>
@@ -183,30 +205,37 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 20,
+    alignItems: 'center',
   },
   headerTop: {
     marginBottom: 16,
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: 'bold',
     color: '#2c3e50',
-    marginBottom: 4,
+    marginBottom: 2,
+    textAlign: 'center',
+    letterSpacing: 0.5,
   },
   headerSubtitle: {
     fontSize: 16,
     color: '#7f8c8d',
+    marginBottom: 4,
+    textAlign: 'center',
   },
   ingredientsSummary: {
-    backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: '#fff',
+    padding: 14,
+    borderRadius: 14,
     marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
+    alignSelf: 'stretch',
   },
   ingredientsTitle: {
     fontSize: 14,
@@ -220,16 +249,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ingredientChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#007AFF',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
     marginRight: 6,
     marginBottom: 4,
   },
   ingredientChipText: {
     color: 'white',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '500',
   },
   moreIngredients: {
@@ -240,14 +271,11 @@ const styles = StyleSheet.create({
   modeInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
+    backgroundColor: '#f1f6fa',
     padding: 12,
     borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    marginTop: 8,
+    alignSelf: 'stretch',
   },
   modeInfoText: {
     fontSize: 14,

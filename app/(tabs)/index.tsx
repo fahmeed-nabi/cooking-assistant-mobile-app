@@ -5,12 +5,14 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { apiService, Ingredient } from '../../services/apiService';
 import { getIngredientsFromFirebase, saveIngredientsToFirebase } from '../../services/firebase';
@@ -18,7 +20,7 @@ import { getIngredientsFromFirebase, saveIngredientsToFirebase } from '../../ser
 const DIETARY_OPTIONS = [
   'vegetarian',
   'vegan',
-  'gluten-free',
+  'gluten free',
 ];
 const CUISINES = [
   'italian',
@@ -43,6 +45,7 @@ export default function IngredientInputScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
+  const [showNoRecipes, setShowNoRecipes] = useState(false);
 
   useEffect(() => {
     loadSavedIngredients();
@@ -102,10 +105,25 @@ export default function IngredientInputScreen() {
   const generateRecipes = async (mode: 'normal' | 'loose' | 'surprise') => {
     console.log('🚀 generateRecipes called with mode:', mode);
     console.log('📝 Current ingredients:', ingredients);
+
+    const recipes = await apiService.searchRecipesByIngredients(
+      ingredients,
+      mode,
+      selectedCuisines,
+      selectedDietary
+    );
     
     if (ingredients.length === 0) {
+      setIsLoading(false);
+      setShowNoRecipes(true);
       console.log('❌ No ingredients found');
       Alert.alert('No Ingredients', 'Please add some ingredients first.');
+      return;
+    }
+
+    if (recipes.length === 0) {
+      setIsLoading(false);
+      setShowNoRecipes(true);
       return;
     }
 
@@ -257,6 +275,49 @@ export default function IngredientInputScreen() {
   );
 
   return (
+  <>
+    <Modal
+      visible={showNoRecipes}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setShowNoRecipes(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <Ionicons name="sad-outline" size={48} color="#FF6B6B" style={{ marginBottom: 12 }} />
+          <Text style={styles.noRecipesTitle}>No Recipes Found</Text>
+          <Text style={styles.noRecipesText}>
+            We couldn't find any recipes with your current ingredients and filters.{"\n"}
+            Try adding more ingredients, changing your filters, or using Surprise Me!
+          </Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
+            <TouchableOpacity
+              style={styles.noRecipesButton}
+              onPress={() => setShowNoRecipes(false)}
+            >
+              <Text style={styles.noRecipesButtonText}>Add Ingredients</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.noRecipesButton, { backgroundColor: '#FF6B6B' }]}
+              onPress={() => {
+                setShowNoRecipes(false);
+                generateRecipes('surprise');
+              }}
+            >
+              <Text style={styles.noRecipesButtonText}>Try Surprise Me</Text>
+            </TouchableOpacity>
+          </View>
+          <Pressable
+            style={styles.closeButton}
+            onPress={() => setShowNoRecipes(false)}
+            accessibilityLabel="Close"
+          >
+            <Ionicons name="close" size={24} color="#888" />
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
       <View style={styles.header}>
         <Text style={styles.title}>What's in your kitchen?</Text>
@@ -371,6 +432,7 @@ export default function IngredientInputScreen() {
         </View>
       </View>
     </ScrollView>
+    </>
   );
 }
 
@@ -561,4 +623,64 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     flex: 1,
   },
-}); 
+  noRecipesContainer: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 24,
+    marginVertical: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  noRecipesTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    marginBottom: 8,
+  },
+  noRecipesText: {
+    fontSize: 15,
+    color: '#7f8c8d',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  noRecipesButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    marginHorizontal: 4,
+  },
+  noRecipesButtonText: {
+    color: 'white',
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)', // semi-transparent dark overlay
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 28,
+    alignItems: 'center',
+    width: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+    position: 'relative',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    padding: 8,
+  },
+});

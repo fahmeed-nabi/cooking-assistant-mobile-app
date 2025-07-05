@@ -4,13 +4,13 @@ import { signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { auth, db } from '../../services/firebase';
 
@@ -58,7 +58,7 @@ export default function ProfileScreen() {
           onPress: async () => {
             try {
               await signOut(auth);
-              router.replace('/');
+              router.replace('/login');
             } catch (error) {
               console.error('Error signing out:', error);
               Alert.alert('Error', 'Failed to sign out');
@@ -196,8 +196,18 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-        <Ionicons name="log-out-outline" size={20} color="#ff6b6b" />
+      <TouchableOpacity
+        style={styles.signOutButton}
+        onPress={async () => {
+          try {
+            await signOut(auth);
+            router.replace('/login');
+          } catch (error) {
+            console.error('Error signing out:', error);
+            Alert.alert('Error', 'Failed to sign out');
+          }
+        }}
+      >
         <Text style={styles.signOutButtonText}>Sign Out</Text>
       </TouchableOpacity>
 

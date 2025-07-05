@@ -279,6 +279,22 @@ export const MOCK_RECIPES = [
     difficulty: 'Easy'
   },
   {
+    id: '42',
+    title: 'Simple Fruit Salad',
+    image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400',
+    ingredients: ['apple', 'banana', 'orange', 'grapes', 'lemon juice'],
+    instructions: [
+      'Chop all fruits into bite-sized pieces.',
+      'Mix fruits in a large bowl.',
+      'Drizzle with lemon juice and toss gently.',
+      'Serve chilled.'
+    ],
+    cookTime: 10,
+    cuisine: 'international', // <--- This is key!
+    dietary: ['vegan', 'gluten free'],
+    difficulty: 'Easy'
+  },
+  {
     id: '17',
     title: 'Beef Stir Fry',
     image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400',

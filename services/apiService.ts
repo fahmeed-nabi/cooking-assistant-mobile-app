@@ -292,15 +292,23 @@ class APIService {
     const recipes = filterRecipesByIngredients(MOCK_RECIPES, ingredients, mode);
     console.log('📋 Found local recipes before filter:', recipes.length);
 
+    // ...inside searchRecipesByIngredientsLocal...
+
     const filtered = recipes.filter(recipe => {
+      const recipeCuisine = (recipe.cuisine || '').toLowerCase();
+      const isInternational = recipeCuisine === 'international';
+
       const cuisineMatch =
         cuisines.length === 0 ||
-        cuisines.map(c => c.toLowerCase()).includes(recipe.cuisine?.toLowerCase());
+        isInternational ||
+        cuisines.map(c => c.toLowerCase()).includes(recipeCuisine);
+
       const dietaryMatch =
         dietary.length === 0 ||
         dietary.every(diet =>
-          recipe.dietary?.map(d => d.toLowerCase()).includes(diet.toLowerCase())
+          (recipe.dietary || []).map(d => d.toLowerCase()).includes(diet.toLowerCase())
         );
+
       if (!cuisineMatch || !dietaryMatch) {
         console.log('Filtered out:', recipe.title, {cuisine: recipe.cuisine, dietary: recipe.dietary});
       }

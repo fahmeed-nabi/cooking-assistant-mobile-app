@@ -3,14 +3,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { arrayRemove, arrayUnion, doc, getDoc, setDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { apiService } from '../../services/apiService';
 import { auth, db } from '../../services/firebase';
@@ -24,6 +25,7 @@ export default function RecipeDetailScreen() {
   const [isSaved, setIsSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   useEffect(() => {
     loadRecipe();
@@ -68,7 +70,7 @@ export default function RecipeDetailScreen() {
   const toggleSaveRecipe = async () => {
     const user = auth.currentUser;
     if (!user) {
-      Alert.alert('Sign In Required', 'Please sign in to save recipes');
+      setShowLoginModal(true);
       return;
     }
 
@@ -129,91 +131,136 @@ export default function RecipeDetailScreen() {
   const matchingIngredients = getMatchingIngredients();
 
   return (
-    <ScrollView style={styles.container}>
-      <Image source={{ uri: recipe.image }} style={styles.image} />
-      
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>{recipe.title}</Text>
-          <TouchableOpacity
-            style={[styles.saveButton, isSaved && styles.saveButtonActive]}
-            onPress={toggleSaveRecipe}
-            disabled={saving}
-          >
-            <Ionicons 
-              name={isSaved ? "heart" : "heart-outline"} 
-              size={24} 
-              color={isSaved ? "#fff" : "#2f4f2f"} 
-            />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.meta}>
-          <View style={styles.metaItem}>
-            <Ionicons name="time-outline" size={16} color="#666" />
-            <Text style={styles.metaText}>{recipe.cookTime} min</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Ionicons name="restaurant-outline" size={16} color="#666" />
-            <Text style={styles.metaText}>{recipe.cuisine}</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Ionicons name="star-outline" size={16} color="#666" />
-            <Text style={styles.metaText}>{recipe.difficulty}</Text>
-          </View>
-        </View>
-
-        <View style={styles.tags}>
-          {recipe.dietary.map(diet => (
-            <View key={diet} style={styles.tag}>
-              <Text style={styles.tagText}>{diet}</Text>
-            </View>
-          ))}
-        </View>
-
-        <View style={styles.ingredientsSection}>
-          <Text style={styles.sectionTitle}>Ingredients</Text>
-          <Text style={styles.ingredientsInfo}>
-            {matchingIngredients.length}/{recipe.ingredients.length} ingredients match
-          </Text>
-          {missingIngredients.length > 0 && (
-            <Text style={styles.missingText}>
-              Missing: {missingIngredients.join(', ')}
+    <>
+      {/* Login Required Modal */}
+      <Modal
+        visible={showLoginModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLoginModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Ionicons name="lock-closed-outline" size={48} color="#FF6B6B" style={{ marginBottom: 12 }} />
+            <Text style={styles.modalTitle}>Sign In Required</Text>
+            <Text style={styles.modalText}>
+              You must be logged in to save recipes.
             </Text>
-          )}
-          {recipe.ingredients.map((ingredient, index) => {
-            const hasIngredient = userIngredients.includes(ingredient.toLowerCase());
-            return (
-              <View key={index} style={styles.ingredientItem}>
-                <Ionicons 
-                  name={hasIngredient ? "checkmark-circle" : "ellipse-outline"} 
-                  size={20} 
-                  color={hasIngredient ? "#4CAF50" : "#ccc"} 
-                />
-                <Text style={[
-                  styles.ingredientText,
-                  !hasIngredient && styles.missingIngredientText
-                ]}>
-                  {ingredient}
-                </Text>
-              </View>
-            );
-          })}
-        </View>
-
-        <View style={styles.instructionsSection}>
-          <Text style={styles.sectionTitle}>Instructions</Text>
-          {recipe.instructions.map((instruction, index) => (
-            <View key={index} style={styles.instructionItem}>
-              <View style={styles.stepNumber}>
-                <Text style={styles.stepNumberText}>{index + 1}</Text>
-              </View>
-              <Text style={styles.instructionText}>{instruction}</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 12 }}>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => setShowLoginModal(false)}
+              >
+                <Text style={styles.modalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#FF6B6B' }]}
+                onPress={() => {
+                  setShowLoginModal(false);
+                  router.replace('/login');
+                }}
+              >
+                <Text style={styles.modalButtonText}>Log In</Text>
+              </TouchableOpacity>
             </View>
-          ))}
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setShowLoginModal(false)}
+              accessibilityLabel="Close"
+            >
+              <Ionicons name="close" size={24} color="#888" />
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </Modal>
+
+      {/* Main Recipe Detail UI */}
+      <ScrollView style={styles.container}>
+        <Image source={{ uri: recipe.image }} style={styles.image} />
+
+        <View style={styles.content}>
+          <View style={styles.header}>
+            <Text style={styles.title}>{recipe.title}</Text>
+            <TouchableOpacity
+              style={[styles.saveButton, isSaved && styles.saveButtonActive]}
+              onPress={toggleSaveRecipe}
+              disabled={saving}
+            >
+              <Ionicons
+                name={isSaved ? "heart" : "heart-outline"}
+                size={24}
+                color={isSaved ? "#fff" : "#2f4f2f"}
+              />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.meta}>
+            <View style={styles.metaItem}>
+              <Ionicons name="time-outline" size={16} color="#666" />
+              <Text style={styles.metaText}>{recipe.cookTime} min</Text>
+            </View>
+            <View style={styles.metaItem}>
+              <Ionicons name="restaurant-outline" size={16} color="#666" />
+              <Text style={styles.metaText}>{recipe.cuisine}</Text>
+            </View>
+            <View style={styles.metaItem}>
+              <Ionicons name="star-outline" size={16} color="#666" />
+              <Text style={styles.metaText}>{recipe.difficulty}</Text>
+            </View>
+          </View>
+
+          <View style={styles.tags}>
+            {recipe.dietary.map(diet => (
+              <View key={diet} style={styles.tag}>
+                <Text style={styles.tagText}>{diet}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.ingredientsSection}>
+            <Text style={styles.sectionTitle}>Ingredients</Text>
+            <Text style={styles.ingredientsInfo}>
+              {matchingIngredients.length}/{recipe.ingredients.length} ingredients match
+            </Text>
+            {missingIngredients.length > 0 && (
+              <Text style={styles.missingText}>
+                Missing: {missingIngredients.join(', ')}
+              </Text>
+            )}
+            {recipe.ingredients.map((ingredient, index) => {
+              const hasIngredient = userIngredients.includes(ingredient.toLowerCase());
+              return (
+                <View key={index} style={styles.ingredientItem}>
+                  <Ionicons
+                    name={hasIngredient ? "checkmark-circle" : "ellipse-outline"}
+                    size={20}
+                    color={hasIngredient ? "#4CAF50" : "#ccc"}
+                  />
+                  <Text style={[
+                    styles.ingredientText,
+                    !hasIngredient && styles.missingIngredientText
+                  ]}>
+                    {ingredient}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+
+          <View style={styles.instructionsSection}>
+            <Text style={styles.sectionTitle}>Instructions</Text>
+            {recipe.instructions.map((instruction, index) => (
+              <View key={index} style={styles.instructionItem}>
+                <View style={styles.stepNumber}>
+                  <Text style={styles.stepNumberText}>{index + 1}</Text>
+                </View>
+                <Text style={styles.instructionText}>{instruction}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+    </>
   );
 }
 
@@ -369,5 +416,53 @@ const styles = StyleSheet.create({
     color: '#2f4f2f',
     flex: 1,
     lineHeight: 24,
+  },
+  modalOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.5)',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 28,
+    alignItems: 'center',
+    width: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+    position: 'relative',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    marginBottom: 8,
+  },
+  modalText: {
+    fontSize: 15,
+    color: '#7f8c8d',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  modalButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    marginHorizontal: 4,
+  },
+  modalButtonText: {
+    color: 'white',
+    fontWeight: '600',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    padding: 8,
   },
 }); 
