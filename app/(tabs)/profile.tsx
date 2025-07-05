@@ -149,67 +149,110 @@ export default function ProfileScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Ionicons name="person-circle" size={80} color="#2f4f2f" />
-        <Text style={styles.title}>{user.email}</Text>
-        <Text style={styles.subtitle}>Welcome back!</Text>
+        <Ionicons name={user ? "person-circle" : "person-circle-outline"} size={80} color="#2f4f2f" />
+        <Text style={styles.title}>
+          {user ? user.email : "Welcome to MealMatch"}
+        </Text>
+        <Text style={styles.subtitle}>
+          {user
+            ? "Welcome back!"
+            : "Sign in to save recipes and manage your ingredients"}
+        </Text>
       </View>
 
-      <View style={styles.statsSection}>
-        <Text style={styles.sectionTitle}>Your Stats</Text>
-        
-        <View style={styles.statsGrid}>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>
-              {userData?.ingredients?.length || 0}
-            </Text>
-            <Text style={styles.statLabel}>Ingredients</Text>
+      {!user ? (
+        <>
+          <View style={styles.authSection}>
+            <TouchableOpacity style={styles.primaryButton} onPress={handleSignIn}>
+              <Ionicons name="log-in-outline" size={20} color="#fff" />
+              <Text style={styles.primaryButtonText}>Sign In</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.secondaryButton} onPress={handleSignUp}>
+              <Ionicons name="person-add-outline" size={20} color="#2f4f2f" />
+              <Text style={styles.secondaryButtonText}>Create Account</Text>
+            </TouchableOpacity>
           </View>
-          
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>
-              {userData?.savedRecipes?.length || 0}
-            </Text>
-            <Text style={styles.statLabel}>Saved Recipes</Text>
+
+          <View style={styles.featuresSection}>
+            <Text style={styles.sectionTitle}>Features</Text>
+            <View style={styles.featureItem}>
+              <Ionicons name="restaurant-outline" size={24} color="#2f4f2f" />
+              <View style={styles.featureContent}>
+                <Text style={styles.featureTitle}>Ingredient Management</Text>
+                <Text style={styles.featureDescription}>
+                  Add and manage your available ingredients
+                </Text>
+              </View>
+            </View>
+            <View style={styles.featureItem}>
+              <Ionicons name="book-outline" size={24} color="#2f4f2f" />
+              <View style={styles.featureContent}>
+                <Text style={styles.featureTitle}>Recipe Discovery</Text>
+                <Text style={styles.featureDescription}>
+                  Find recipes based on your ingredients
+                </Text>
+              </View>
+            </View>
+            <View style={styles.featureItem}>
+              <Ionicons name="heart-outline" size={24} color="#2f4f2f" />
+              <View style={styles.featureContent}>
+                <Text style={styles.featureTitle}>Save Favorites</Text>
+                <Text style={styles.featureDescription}>
+                  Save your favorite recipes for later
+                </Text>
+              </View>
+            </View>
           </View>
-        </View>
-      </View>
+        </>
+      ) : (
+        <>
+          <View style={styles.statsSection}>
+            <Text style={styles.sectionTitle}>Your Stats</Text>
+            <View style={styles.statsGrid}>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>
+                  {userData?.ingredients?.length || 0}
+                </Text>
+                <Text style={styles.statLabel}>Ingredients</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>
+                  {userData?.savedRecipes?.length || 0}
+                </Text>
+                <Text style={styles.statLabel}>Saved Recipes</Text>
+              </View>
+            </View>
+          </View>
 
-      <View style={styles.actionsSection}>
-        <Text style={styles.sectionTitle}>Account</Text>
-        
-        <TouchableOpacity style={styles.actionItem}>
-          <Ionicons name="settings-outline" size={20} color="#666" />
-          <Text style={styles.actionText}>Settings</Text>
-          <Ionicons name="chevron-forward" size={20} color="#ccc" />
-        </TouchableOpacity>
+          <View style={styles.actionsSection}>
+            <Text style={styles.sectionTitle}>Account</Text>
+            <TouchableOpacity
+              style={styles.actionItem}
+              onPress={() => router.push('/profile/help')}
+            >
+              <Ionicons name="help-circle-outline" size={20} color="#666" />
+              <Text style={styles.actionText}>Help & Support</Text>
+              <Ionicons name="chevron-forward" size={20} color="#ccc" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionItem}
+              onPress={() => router.push('/profile/about')}
+            >
+              <Ionicons name="information-circle-outline" size={20} color="#666" />
+              <Text style={styles.actionText}>About MealMatch</Text>
+              <Ionicons name="chevron-forward" size={20} color="#ccc" />
+            </TouchableOpacity>
+          </View>
 
-        <TouchableOpacity style={styles.actionItem}>
-          <Ionicons name="help-circle-outline" size={20} color="#666" />
-          <Text style={styles.actionText}>Help & Support</Text>
-          <Ionicons name="chevron-forward" size={20} color="#ccc" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.actionItem}>
-          <Ionicons name="information-circle-outline" size={20} color="#666" />
-          <Text style={styles.actionText}>About MealMatch</Text>
-          <Ionicons name="chevron-forward" size={20} color="#ccc" />
-        </TouchableOpacity>
-      </View>
-
-      <TouchableOpacity
-        style={styles.signOutButton}
-        onPress={async () => {
-          try {
-            await signOut(auth);
-            router.replace('/login');
-          } catch (error) {
-            console.error('Error signing out:', error);
-            Alert.alert('Error', 'Failed to sign out');
-          }
-        }}
-      >
-        <Text style={styles.signOutButtonText}>Sign Out</Text>
-      </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.signOutButton}
+            onPress={handleSignOut}
+          >
+            <Text style={styles.signOutButtonText}>Sign Out</Text>
+          </TouchableOpacity>
+        </>
+      )}
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>MealMatch v1.0.0</Text>
