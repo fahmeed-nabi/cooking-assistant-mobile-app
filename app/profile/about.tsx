@@ -7,7 +7,7 @@ export default function AboutScreen() {
   const router = useRouter();
 
   return (
-    <>
+    <View style={{ flex: 1 }}>
       <Stack.Screen
         options={{
           title: 'About MealMatch',
@@ -41,7 +41,7 @@ export default function AboutScreen() {
           </Text>
         </View>
       </ScrollView>
-    </>
+    </View>
   );
 }
 

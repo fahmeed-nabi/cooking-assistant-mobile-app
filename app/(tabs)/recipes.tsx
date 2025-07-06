@@ -41,7 +41,7 @@ export default function RecipesScreen() {
     } else {
       console.log('⚠️ Missing params:', { recipes: !!params.recipes, mode: !!params.mode, ingredients: !!params.ingredients });
     }
-  }, [params]);
+  }, []);
 
   const renderRecipeItem = ({ item }: { item: Recipe }) => (
     <TouchableOpacity

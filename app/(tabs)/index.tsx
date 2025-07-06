@@ -275,7 +275,7 @@ export default function IngredientInputScreen() {
   );
 
   return (
-  <>
+  <View style={styles.container}>
     <Modal
       visible={showNoRecipes}
       transparent
@@ -318,7 +318,7 @@ export default function IngredientInputScreen() {
       </View>
     </Modal>
 
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
+    <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
       <View style={styles.header}>
         <Text style={styles.title}>What's in your kitchen?</Text>
         <Text style={styles.subtitle}>
@@ -423,16 +423,16 @@ export default function IngredientInputScreen() {
           <Text style={styles.infoText}>Find Recipes: Uses your exact ingredients</Text>
         </View>
         <View style={styles.infoItem}>
-          <Ionicons name="options" size={16} color="#007AFF" />
-          <Text style={styles.infoText}>Loose Match: Suggests recipes with similar ingredients</Text>
+          <Ionicons name="options" size={16} color="#FF9800" />
+          <Text style={styles.infoText}>Loose Match: Finds recipes with similar ingredients</Text>
         </View>
         <View style={styles.infoItem}>
           <Ionicons name="sparkles" size={16} color="#FF6B6B" />
-          <Text style={styles.infoText}>Surprise Me: AI-powered creative suggestions</Text>
+          <Text style={styles.infoText}>Surprise Me: Gives you a random recipe</Text>
         </View>
       </View>
     </ScrollView>
-    </>
+  </View>
   );
 }
 

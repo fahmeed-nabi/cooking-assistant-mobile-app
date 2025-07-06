@@ -7,7 +7,7 @@ export default function HelpScreen() {
   const router = useRouter();
 
   return (
-    <>
+    <View style={{ flex: 1 }}>
       <Stack.Screen
         options={{
           title: 'Help & Support',
@@ -37,7 +37,7 @@ export default function HelpScreen() {
           <Text style={styles.answer}>There is no contact support for this app. This application was created as a project by students at the University of Virginia. We do not actively maintain this application.</Text>
         </View>
       </ScrollView>
-    </>
+    </View>
   );
 }
 

@@ -22,7 +22,7 @@ export const API_CONFIG = {
   NORMAL_MATCH_SCORE: 0.6,  // Minimum score for normal mode
   SURPRISE_RANDOMNESS: 0.3, // Randomness factor for surprise mode
 
-  GEMINI_API_KEY: 'YOUR_GEMINI_API_KEY', // Replace with your Gemini API key
+  GEMINI_API_KEY: 'AIzaSyBjlEW2NxbXpwpyLxepCwuiuFLe6tplk90', // Replace with your Gemini API key
 };
 
 // API Endpoints
