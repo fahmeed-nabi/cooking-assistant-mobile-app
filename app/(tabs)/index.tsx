@@ -2,17 +2,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { apiService, Ingredient } from '../../services/apiService';
 import { getIngredientsFromFirebase, saveIngredientsToFirebase } from '../../services/firebase';
@@ -79,25 +79,14 @@ export default function IngredientInputScreen() {
   const generateRecipes = async (mode: 'normal' | 'loose' | 'surprise') => {
     console.log('🚀 generateRecipes called with mode:', mode);
     console.log('📝 Current ingredients:', ingredients);
+    console.log('🍽️ Selected cuisines:', selectedCuisines);
+    console.log('🥗 Selected dietary:', selectedDietary);
 
-    const recipes = await apiService.searchRecipesByIngredients(
-      ingredients,
-      mode,
-      selectedCuisines,
-      selectedDietary
-    );
-    
     if (ingredients.length === 0) {
       setIsLoading(false);
       setShowNoRecipes(true);
       console.log('❌ No ingredients found');
       Alert.alert('No Ingredients', 'Please add some ingredients first.');
-      return;
-    }
-
-    if (recipes.length === 0) {
-      setIsLoading(false);
-      setShowNoRecipes(true);
       return;
     }
 
@@ -113,19 +102,13 @@ export default function IngredientInputScreen() {
         selectedCuisines, 
         selectedDietary);
       
-      console.log('📊 Recipes found:', recipes.length);
+      console.log('📊 Recipes returned from apiService:', recipes);
+      console.log('📊 Number of recipes:', recipes.length);
       
       if (recipes.length === 0) {
-        console.log('❌ No recipes found');
-        Alert.alert(
-          'No Recipes Found',
-          'No recipes found with your ingredients. Try adding more ingredients or using a different mode.',
-          [
-            { text: 'Add More Ingredients', onPress: () => {} },
-            { text: 'Try Loose Mode', onPress: () => generateRecipes('loose') },
-            { text: 'Cancel', style: 'cancel' }
-          ]
-        );
+        console.log('❌ No recipes found, showing popup');
+        setIsLoading(false);
+        setShowNoRecipes(true);
         return;
       }
 

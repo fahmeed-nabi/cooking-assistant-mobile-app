@@ -11,7 +11,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Recipe } from '../../services/recipeData';
 
 export default function RecipesScreen() {
   const params = useLocalSearchParams();

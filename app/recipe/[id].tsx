@@ -15,12 +15,11 @@ import {
 } from 'react-native';
 import { apiService } from '../../services/apiService';
 import { auth, db } from '../../services/firebase';
-import { Recipe } from '../../services/recipeData';
 
 export default function RecipeDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [recipe, setRecipe] = useState<any | null>(null); // Changed to any for now as Recipe type is removed
   const [userIngredients, setUserIngredients] = useState<string[]>([]);
   const [isSaved, setIsSaved] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -227,7 +226,7 @@ export default function RecipeDetailScreen() {
                 Missing: {missingIngredients.join(', ')}
               </Text>
             )}
-            {recipe.ingredients.map((ingredient, index) => {
+            {recipe.ingredients.map((ingredient: string, index: number) => {
               const hasIngredient = userIngredients.includes(ingredient.toLowerCase());
               return (
                 <View key={index} style={styles.ingredientItem}>
@@ -249,7 +248,7 @@ export default function RecipeDetailScreen() {
 
           <View style={styles.instructionsSection}>
             <Text style={styles.sectionTitle}>Instructions</Text>
-            {recipe.instructions.map((instruction, index) => (
+            {recipe.instructions.map((instruction: string, index: number) => (
               <View key={index} style={styles.instructionItem}>
                 <View style={styles.stepNumber}>
                   <Text style={styles.stepNumberText}>{index + 1}</Text>

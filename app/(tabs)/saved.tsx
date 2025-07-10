@@ -3,20 +3,19 @@ import { useRouter } from 'expo-router';
 import { doc, getDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Image,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { auth, db } from '../../services/firebase';
-import { MOCK_RECIPES, Recipe } from '../../services/recipeData';
 
 export default function SavedRecipesScreen() {
-  const [savedRecipes, setSavedRecipes] = useState<Recipe[]>([]);
+  const [savedRecipes, setSavedRecipes] = useState<any[]>([]); // Changed type to any[] as Recipe is removed
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -35,9 +34,16 @@ export default function SavedRecipesScreen() {
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       if (userDoc.exists()) {
         const savedRecipeIds = userDoc.data().savedRecipes || [];
-        const recipes = MOCK_RECIPES.filter(recipe => 
-          savedRecipeIds.includes(recipe.id)
-        );
+        // Fetch actual recipe data from Firebase or a separate data source if needed
+        // For now, we'll just use the IDs to display a placeholder
+        const recipes = savedRecipeIds.map(id => ({
+          id,
+          title: 'Recipe Title Placeholder',
+          image: 'https://via.placeholder.com/150',
+          cookTime: 30,
+          cuisine: 'Cuisine Placeholder',
+          dietary: ['Dietary Placeholder'],
+        }));
         setSavedRecipes(recipes);
       }
     } catch (error) {
@@ -48,7 +54,7 @@ export default function SavedRecipesScreen() {
     }
   };
 
-  const renderRecipe = ({ item }: { item: Recipe }) => (
+  const renderRecipe = ({ item }: { item: any }) => ( // Changed type to any
     <TouchableOpacity
       style={styles.recipeCard}
       onPress={() => router.push(`/recipe/${item.id}`)}

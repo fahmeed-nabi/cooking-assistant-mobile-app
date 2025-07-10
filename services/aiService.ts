@@ -1,9 +1,20 @@
 // AI/ML Service for intelligent recipe matching and recommendations
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { API_CONFIG } from '../constants/apiConfig';
-import { Recipe } from './recipeData';
 
 const genAI = new GoogleGenerativeAI(API_CONFIG.GEMINI_API_KEY);
+
+export interface Recipe {
+  id: string;
+  title: string;
+  image: string;
+  ingredients: string[];
+  instructions: string[];
+  cookTime: number;
+  cuisine: string;
+  dietary: string[];
+  difficulty: string;
+}
 
 export interface RecipeMatch {
   recipe: Recipe;
@@ -543,8 +554,100 @@ class AIService {
       }
       \`\`\`
 
-      Do not include any text, explanation, or markdown formatting before or after the JSON object. Your entire response must be only the JSON.
+      Do not include any text, explanation, or markdown formatting before or after the JSON. Your entire response must be only the JSON.
     `;
+  }
+
+  private createPromptForMode(ingredients: string[], mode: 'normal' | 'loose' | 'surprise'): string {
+    const ingredientList = ingredients.join(', ');
+    const baseJsonExample = `
+Respond ONLY with a valid JSON array of objects, each with:
+- "title": string (the meal name)
+- "ingredients": array of strings (list all ingredients used)
+- "instructions": array of strings (step-by-step)
+
+Example:
+[
+  {
+    "title": "Chicken Fried Rice",
+    "ingredients": ["rice", "chicken"],
+    "instructions": [
+      "Cook the rice.",
+      "Sauté the chicken.",
+      "Mix together and serve."
+    ]
+  }
+]
+Do not include any explanation or text before or after the JSON.`;
+
+    switch (mode) {
+      case 'normal':
+        return `
+You are a world-class chef. Suggest a list of meals that can be made using ONLY these ingredients: ${ingredientList}. Do not use any other ingredients.
+${baseJsonExample}`;
+      case 'loose':
+        return `
+You are a world-class chef. Suggest a list of meals that can be made using these ingredients: ${ingredientList}, plus at most ONE additional common ingredient (such as salt, oil, or a basic pantry staple). Clearly indicate the extra ingredient in the list.
+${baseJsonExample}`;
+      case 'surprise':
+        return `
+You are a Michelin-star chef. Using these ingredients as a base: ${ingredientList}, invent extravagant, creative, Michelin-star-worthy meals. You may add as many other ingredients as you wish to make the recipes impressive and unique. Clearly list all ingredients used.
+${baseJsonExample}`;
+    }
+  }
+
+  async findRecipes(ingredients: string[], mode: 'normal' | 'loose' | 'surprise'): Promise<any[]> {
+    console.log('🔍 findRecipes called with:', { ingredients, mode });
+    console.log('🔑 Gemini API Key:', API_CONFIG.GEMINI_API_KEY ? 'Present' : 'Missing');
+    console.log('🔑 API Key value:', API_CONFIG.GEMINI_API_KEY);
+    
+    if (!API_CONFIG.GEMINI_API_KEY || API_CONFIG.GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY') {
+      console.log('❌ No valid Gemini API key found, returning empty array');
+      return [];
+    }
+    
+    console.log('✅ Valid API key found, proceeding with LLM call...');
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const prompt = this.createPromptForMode(ingredients, mode);
+    
+    console.log('📝 Generated prompt:', prompt);
+    
+    try {
+      console.log('🤖 Calling Gemini API...');
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+      
+      console.log('📄 Raw LLM response:', text);
+      
+      // Try to parse the response as a JSON array
+      const startIndex = text.indexOf('[');
+      const endIndex = text.lastIndexOf(']');
+      
+      if (startIndex === -1 || endIndex === -1) {
+        console.log('❌ No JSON array found in response');
+        return [];
+      }
+      
+      const jsonString = text.substring(startIndex, endIndex + 1);
+      console.log('🔧 Extracted JSON string:', jsonString);
+      
+      const recipes = JSON.parse(jsonString);
+      console.log('✅ Parsed recipes:', recipes);
+      
+      // Add unique IDs and a default image if missing
+      const processedRecipes = recipes.map((recipe: any, index: number) => ({
+        ...recipe,
+        id: recipe.id || `ai-${Date.now()}-${index}`,
+        image: recipe.image || 'https://images.unsplash.com/photo-1542010589005-d1eacc3918f2?w=400',
+      }));
+      
+      console.log('🎉 Final processed recipes:', processedRecipes);
+      return processedRecipes;
+    } catch (error) {
+      console.error('❌ Error in findRecipes:', error);
+      return [];
+    }
   }
 }
 

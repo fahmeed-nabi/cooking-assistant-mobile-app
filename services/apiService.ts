@@ -1,7 +1,6 @@
 // API Service for external recipe and ingredient databases
 import { API_CONFIG, API_ENDPOINTS } from '../constants/apiConfig';
 import { aiService } from './aiService';
-import { MOCK_RECIPES, Recipe, filterRecipesByIngredients } from './recipeData';
 
 // API Configuration
 const SPOONACULAR_API_KEY = API_CONFIG.SPOONACULAR_API_KEY;
@@ -174,7 +173,7 @@ class APIService {
   }
 
   // Search recipes using Spoonacular API
-  async searchRecipes(params: SearchParams): Promise<Recipe[]> {
+  async searchRecipes(params: SearchParams): Promise<any[]> {
     try {
       if (!SPOONACULAR_API_KEY || SPOONACULAR_API_KEY === 'YOUR_SPOONACULAR_API_KEY') {
         // Fallback to TheMealDB if no Spoonacular key
@@ -213,113 +212,13 @@ class APIService {
     mode: 'normal' | 'loose' | 'surprise',
     cuisines: string[] = [],
     dietary: string[] = []
-  ): Promise<Recipe[]> {
-    console.log('🔍 Searching recipes by ingredients:', { ingredients, mode, cuisines, dietary });
-
-    if (mode === 'surprise') {
-      // Pass cuisines and dietary to AI
-      const aiRecipe = await aiService.generateRecipe(ingredients, cuisines, dietary);
-      if (aiRecipe) {
-        return [aiRecipe];
-      } else {
-        return this.searchRecipesByIngredientsLocal(ingredients, mode, cuisines, dietary);
-      }
-    }
-
-    try {
-      if (!SPOONACULAR_API_KEY || SPOONACULAR_API_KEY === 'YOUR_SPOONACULAR_API_KEY') {
-        return this.searchRecipesByIngredientsLocal(ingredients, mode, cuisines, dietary);
-      }
-
-      // Add cuisines and dietary to API call if present
-      const ingredientsString = ingredients.join(',');
-      const ranking = mode === 'normal' ? 1 : mode === 'loose' ? 2 : 3;
-      const ignorePantry = mode === 'normal' ? 'true' : 'false';
-      let url = `${SPOONACULAR_BASE_URL}${API_ENDPOINTS.SPOONACULAR.RECIPES_BY_INGREDIENTS}?apiKey=${SPOONACULAR_API_KEY}&ingredients=${encodeURIComponent(ingredientsString)}&ranking=${ranking}&ignorePantry=${ignorePantry}&number=${API_CONFIG.MAX_RECIPE_SEARCH_RESULTS}`;
-
-      // Spoonacular's by-ingredients endpoint doesn't support cuisine/diet directly, so filter after fetching
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        throw new Error(`API request failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const detailedRecipes = await Promise.all(
-        data.map(async (recipe: any) => {
-          try {
-            const detailResponse = await fetch(
-              `${SPOONACULAR_BASE_URL}${API_ENDPOINTS.SPOONACULAR.RECIPE_INFO.replace('{id}', recipe.id)}?apiKey=${SPOONACULAR_API_KEY}`
-            );
-            if (detailResponse.ok) {
-              const detailData = await detailResponse.json();
-              return this.transformAPIRecipe(detailData);
-            }
-          } catch (error) {
-            console.error('Error fetching recipe details:', error);
-          }
-          return null;
-        })
-      );
-
-      // Filter by cuisine and dietary after fetching details
-      const validRecipes = (detailedRecipes.filter(recipe => recipe !== null) as Recipe[])
-      .filter(recipe => {
-        const cuisineMatch =
-          cuisines.length === 0 ||
-          cuisines.map(c => c.toLowerCase()).includes(recipe.cuisine.toLowerCase());
-        const dietaryMatch =
-          dietary.length === 0 ||
-          dietary.every(diet =>
-            recipe.dietary.map(d => d.toLowerCase()).includes(diet.toLowerCase())
-          );
-        return cuisineMatch && dietaryMatch;
-      });
-
-      return validRecipes;
-    } catch (error) {
-      return this.searchRecipesByIngredientsLocal(ingredients, mode, cuisines, dietary);
-    }
-  }
-
-  // Local recipe matching (fallback)
-  private searchRecipesByIngredientsLocal(
-    ingredients: string[],
-    mode: 'normal' | 'loose' | 'surprise',
-    cuisines: string[] = [],
-    dietary: string[] = []
-  ): Recipe[] {
-    const recipes = filterRecipesByIngredients(MOCK_RECIPES, ingredients, mode);
-    console.log('📋 Found local recipes before filter:', recipes.length);
-
-    // ...inside searchRecipesByIngredientsLocal...
-
-    const filtered = recipes.filter(recipe => {
-      const recipeCuisine = (recipe.cuisine || '').toLowerCase();
-      const isInternational = recipeCuisine === 'international';
-
-      const cuisineMatch =
-        cuisines.length === 0 ||
-        isInternational ||
-        cuisines.map(c => c.toLowerCase()).includes(recipeCuisine);
-
-      const dietaryMatch =
-        dietary.length === 0 ||
-        dietary.every(diet =>
-          (recipe.dietary || []).map(d => d.toLowerCase()).includes(diet.toLowerCase())
-        );
-
-      if (!cuisineMatch || !dietaryMatch) {
-        console.log('Filtered out:', recipe.title, {cuisine: recipe.cuisine, dietary: recipe.dietary});
-      }
-      return cuisineMatch && dietaryMatch;
-    });
-    console.log('📋 Found local recipes after filter:', filtered.length);
-    return filtered;
+  ): Promise<any[]> {
+    // Always use the LLM for all modes
+    return aiService.findRecipes(ingredients, mode);
   }
 
   // Transform Spoonacular API recipe to our Recipe format
-  private transformAPIRecipe(apiRecipe: APIRecipe): Recipe {
+  private transformAPIRecipe(apiRecipe: APIRecipe): any {
     const ingredients = apiRecipe.extendedIngredients?.map(ing => ing.original) || [];
     
     let instructions: string[] = [];
@@ -345,7 +244,7 @@ class APIService {
   }
 
   // Transform TheMealDB recipe to our Recipe format
-  private transformMealDBRecipe(meal: any): Recipe {
+  private transformMealDBRecipe(meal: any): any {
     const ingredients = [];
     const instructions = meal.strInstructions ? meal.strInstructions.split('\n').filter((step: string) => step.trim()) : [];
 
@@ -379,7 +278,7 @@ class APIService {
   }
 
   // Search recipes using TheMealDB as a fallback
-  private async searchRecipesFromMealDB(params: SearchParams): Promise<Recipe[]> {
+  private async searchRecipesFromMealDB(params: SearchParams): Promise<any[]> {
     try {
       let url = `${MEALDB_BASE_URL}/search.php?s=${encodeURIComponent(params.query || '')}`;
       const response = await fetch(url);
@@ -396,13 +295,14 @@ class APIService {
   }
 
   // Get recipe details by ID
-  async getRecipeById(id: string): Promise<Recipe | null> {
+  async getRecipeById(id: string): Promise<any | null> {
     try {
       if (!SPOONACULAR_API_KEY || SPOONACULAR_API_KEY === 'YOUR_SPOONACULAR_API_KEY') {
         // Fallback to local recipe
-        const { getRecipeById } = await import('./recipeData');
-        const recipe = getRecipeById(id);
-        return recipe || null;
+        // This function is no longer needed as AI service handles recipe generation.
+        // Keeping it for now to avoid breaking existing calls, but it will return null.
+        console.warn('getRecipeById is deprecated and will return null.');
+        return null;
       }
 
       const response = await fetch(
@@ -419,9 +319,10 @@ class APIService {
       console.error('Error fetching recipe by ID:', error);
       // Fallback to local recipe
       try {
-        const { getRecipeById } = await import('./recipeData');
-        const recipe = getRecipeById(id);
-        return recipe || null;
+        // This function is no longer needed as AI service handles recipe generation.
+        // Keeping it for now to avoid breaking existing calls, but it will return null.
+        console.warn('getRecipeById is deprecated and will return null.');
+        return null;
       } catch (importError) {
         console.error('Error importing recipe data:', importError);
         return null;
