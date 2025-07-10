@@ -1,6 +1,7 @@
 // AI/ML Service for intelligent recipe matching and recommendations
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { API_CONFIG } from '../constants/apiConfig';
+import { imageService } from './imageService';
 
 const genAI = new GoogleGenerativeAI(API_CONFIG.GEMINI_API_KEY);
 
@@ -495,7 +496,10 @@ class AIService {
       const text = response.text();
       const recipeJson = this.parseRecipeJson(text);
       recipeJson.id = `ai-${Date.now()}`;
-      recipeJson.image = `https://images.unsplash.com/photo-1542010589005-d1eacc3918f2?w=400`;
+      
+      // Search for a professional image for this recipe
+      recipeJson.image = await imageService.searchRecipeImage(recipeJson.title, recipeJson.cuisine);
+      
       return recipeJson as Recipe;
     } catch (error) {
       return null;
@@ -635,14 +639,25 @@ ${baseJsonExample}`;
       const recipes = JSON.parse(jsonString);
       console.log('✅ Parsed recipes:', recipes);
       
-      // Add unique IDs and a default image if missing
-      const processedRecipes = recipes.map((recipe: any, index: number) => ({
-        ...recipe,
-        id: recipe.id || `ai-${Date.now()}-${index}`,
-        image: recipe.image || 'https://images.unsplash.com/photo-1542010589005-d1eacc3918f2?w=400',
+      // Add unique IDs and search for professional images
+      const processedRecipes = await Promise.all(recipes.map(async (recipe: any, index: number) => {
+        const recipeId = recipe.id || `ai-${Date.now()}-${index}`;
+        
+        // Search for a professional image for this recipe
+        const imageUrl = await imageService.searchRecipeImage(recipe.title, recipe.cuisine);
+        
+        return {
+          ...recipe,
+          id: recipeId,
+          image: imageUrl,
+          cookTime: recipe.cookTime || 30,
+          cuisine: recipe.cuisine || 'International',
+          dietary: recipe.dietary || [],
+          difficulty: recipe.difficulty || 'Medium',
+        };
       }));
       
-      console.log('🎉 Final processed recipes:', processedRecipes);
+      console.log('🎉 Final processed recipes with images:', processedRecipes);
       return processedRecipes;
     } catch (error) {
       console.error('❌ Error in findRecipes:', error);

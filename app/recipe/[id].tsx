@@ -3,21 +3,21 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { arrayRemove, arrayUnion, doc, getDoc, setDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import { apiService } from '../../services/apiService';
 import { auth, db } from '../../services/firebase';
 
 export default function RecipeDetailScreen() {
-  const { id } = useLocalSearchParams();
+  const params = useLocalSearchParams();
+  const { id, recipe: recipeParam } = params;
   const router = useRouter();
   const [recipe, setRecipe] = useState<any | null>(null); // Changed to any for now as Recipe type is removed
   const [userIngredients, setUserIngredients] = useState<string[]>([]);
@@ -29,15 +29,21 @@ export default function RecipeDetailScreen() {
   useEffect(() => {
     loadRecipe();
     loadUserData();
-  }, [id]);
+  }, [id, recipeParam]);
 
   const loadRecipe = async () => {
     setLoading(true);
     try {
-      const foundRecipe = await apiService.getRecipeById(id as string);
-      if (foundRecipe) {
+      console.log('Recipe detail screen - params:', params);
+      console.log('Recipe param:', recipeParam);
+      
+      // Get recipe data from navigation params
+      if (recipeParam) {
+        const foundRecipe = JSON.parse(recipeParam as string);
+        console.log('Parsed recipe:', foundRecipe);
         setRecipe(foundRecipe);
       } else {
+        console.log('No recipe param found');
         Alert.alert('Error', 'Recipe not found');
         router.back();
       }
@@ -97,14 +103,14 @@ export default function RecipeDetailScreen() {
 
   const getMissingIngredients = () => {
     if (!recipe) return [];
-    return recipe.ingredients.filter(ingredient =>
+    return recipe.ingredients.filter((ingredient: string) =>
       !userIngredients.includes(ingredient.toLowerCase())
     );
   };
 
   const getMatchingIngredients = () => {
     if (!recipe) return [];
-    return recipe.ingredients.filter(ingredient =>
+    return recipe.ingredients.filter((ingredient: string) =>
       userIngredients.includes(ingredient.toLowerCase())
     );
   };
@@ -209,7 +215,7 @@ export default function RecipeDetailScreen() {
           </View>
 
           <View style={styles.tags}>
-            {recipe.dietary.map(diet => (
+            {(recipe.dietary ?? []).map((diet: string) => (
               <View key={diet} style={styles.tag}>
                 <Text style={styles.tagText}>{diet}</Text>
               </View>

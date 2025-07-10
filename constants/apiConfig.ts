@@ -22,7 +22,11 @@ export const API_CONFIG = {
   NORMAL_MATCH_SCORE: 0.6,  // Minimum score for normal mode
   SURPRISE_RANDOMNESS: 0.3, // Randomness factor for surprise mode
 
-  GEMINI_API_KEY: 'YOUR_GEMINI_API_KEY', // Replace with your Gemini API key
+  GEMINI_API_KEY: 'AIzaSyB7k38YQBT0qOleRTnX0r4sin-JXIU4tkQ', // Replace with your Gemini API key
+  
+  // Unsplash API for recipe images
+  // Get free API key at: https://unsplash.com/developers
+  UNSPLASH_ACCESS_KEY: 'oW5wQUf6YZOyQkmGYePXaS4e9tA-zomAzwOj02Qxq0s',
 };
 
 // API Endpoints
@@ -43,6 +47,10 @@ export const API_ENDPOINTS = {
   USDA: {
     BASE_URL: 'https://api.nal.usda.gov/fdc/v1',
     SEARCH: '/foods/search',
+  },
+  UNSPLASH: {
+    BASE_URL: 'https://api.unsplash.com',
+    SEARCH: '/search/photos',
   },
 };
 

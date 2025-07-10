@@ -25,6 +25,7 @@ A React Native mobile app that helps users discover recipes based on ingredients
 - **Spoonacular API**: 5,000+ recipes with detailed nutrition and instructions
 - **TheMealDB API**: 2.3M+ recipes (free fallback)
 - **USDA Food Database**: 300,000+ ingredients with nutritional data
+- **Unsplash API**: Professional food photography for recipes
 - **Local Fallback**: Curated recipes when APIs are unavailable
 
 ## 🛠️ Technology Stack
@@ -88,6 +89,17 @@ export const API_CONFIG = {
 - **TheMealDB**: Automatically used as fallback
 - **USDA Food Database**: Automatically used as fallback
 
+#### Unsplash API (For Professional Recipe Images)
+1. Get a free API key at [Unsplash Developers](https://unsplash.com/developers)
+2. Update `constants/apiConfig.ts`:
+```typescript
+export const API_CONFIG = {
+  // ... other settings
+  UNSPLASH_ACCESS_KEY: 'your-unsplash-access-key',
+};
+```
+This will automatically search for professional food photography for each recipe!
+
 ### 5. Run the App
 ```bash
 npm start
@@ -100,6 +112,9 @@ npm start
 export const API_CONFIG = {
   // Spoonacular API (Recommended)
   SPOONACULAR_API_KEY: 'YOUR_SPOONACULAR_API_KEY',
+  
+  // Unsplash API (For Professional Recipe Images)
+  UNSPLASH_ACCESS_KEY: 'YOUR_UNSPLASH_ACCESS_KEY',
   
   // Search Settings
   MAX_INGREDIENT_SEARCH_RESULTS: 10,

@@ -2,15 +2,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Image,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
+import { Recipe } from '../../services/aiService';
 
 export default function RecipesScreen() {
   const params = useLocalSearchParams();
@@ -47,7 +48,15 @@ export default function RecipesScreen() {
       style={styles.recipeCard}
       onPress={() => {
         console.log(`Navigating to recipe with ID: ${item.id}`);
-        router.push(`/recipe/${item.id}`);
+        console.log('Recipe data:', JSON.stringify(item, null, 2));
+        try {
+          router.push({
+            pathname: '/recipe/[id]' as any,
+            params: { id: item.id, recipe: JSON.stringify(item) }
+          });
+        } catch (error) {
+          console.error('Navigation error:', error);
+        }
       }}
     >
       <Image
@@ -79,7 +88,7 @@ export default function RecipesScreen() {
         </View>
 
         <View style={styles.dietaryTags}>
-          {item.dietary.map((diet, index) => (
+          {(item.dietary ?? []).map((diet, index) => (
             <View key={index} style={styles.dietaryTag}>
               <Text style={styles.dietaryText}>{diet}</Text>
             </View>
