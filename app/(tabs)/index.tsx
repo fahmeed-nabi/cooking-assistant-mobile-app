@@ -2,17 +2,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { apiService, Ingredient } from '../../services/apiService';
 import { getIngredientsFromFirebase, saveIngredientsToFirebase } from '../../services/firebase';
@@ -40,8 +40,6 @@ const CUISINES = [
 export default function IngredientInputScreen() {
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Ingredient[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
@@ -50,14 +48,6 @@ export default function IngredientInputScreen() {
   useEffect(() => {
     loadSavedIngredients();
   }, []);
-
-  useEffect(() => {
-    if (searchQuery.length > 2) {
-      searchIngredients();
-    } else {
-      setSearchResults([]);
-    }
-  }, [searchQuery]);
 
   const loadSavedIngredients = async () => {
     try {
@@ -70,30 +60,14 @@ export default function IngredientInputScreen() {
     }
   };
 
-  const searchIngredients = async () => {
-    if (searchQuery.length < 3) return;
-
-    setIsSearching(true);
-    try {
-      const results = await apiService.searchIngredients(searchQuery, 10);
-      setSearchResults(results);
-    } catch (error) {
-      console.error('Error searching ingredients:', error);
-      Alert.alert('Error', 'Failed to search ingredients. Please try again.');
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
   const addIngredient = (ingredient: string) => {
     const normalizedIngredient = ingredient.toLowerCase().trim();
-    if (!ingredients.includes(normalizedIngredient)) {
+    if (normalizedIngredient && !ingredients.includes(normalizedIngredient)) {
       const newIngredients = [...ingredients, normalizedIngredient];
       setIngredients(newIngredients);
       saveIngredientsToFirebase(newIngredients);
     }
     setSearchQuery('');
-    setSearchResults([]);
   };
 
   const removeIngredient = (ingredient: string) => {
@@ -322,36 +296,26 @@ export default function IngredientInputScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>What's in your kitchen?</Text>
         <Text style={styles.subtitle}>
-          Add ingredients you have and we'll find recipes for you
+          Type any ingredient and press Enter to add it
         </Text>
       </View>
 
       <View style={styles.searchContainer}>
         <View style={styles.searchInputContainer}>
-          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+          <Ionicons name="add-circle" size={20} color="#666" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search for ingredients..."
+            placeholder="Type any ingredient and press Enter..."
             value={searchQuery}
             onChangeText={setSearchQuery}
+            onSubmitEditing={() => {
+              if (searchQuery.trim()) addIngredient(searchQuery);
+            }}
+            returnKeyType="done"
             autoCapitalize="none"
             autoCorrect={false}
           />
-          {isSearching && (
-            <ActivityIndicator size="small" color="#007AFF" style={styles.searchLoader} />
-          )}
         </View>
-
-        {searchResults.length > 0 && (
-          <View style={styles.searchResults}>
-            <FlatList
-              data={searchResults}
-              renderItem={renderIngredientItem}
-              keyExtractor={(item) => item.id}
-              style={styles.searchResultsList}
-            />
-          </View>
-        )}
       </View>
 
       {ingredients.length > 0 && (
