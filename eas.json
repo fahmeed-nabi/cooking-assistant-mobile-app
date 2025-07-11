@@ -1,0 +1,19 @@
+{
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal"
+    },
+    "production": {
+      "env": {
+        "EXPO_PUBLIC_GEMINI_API_KEY": "AIzaSyBjlEW2NxbXpwpyLxepCwuiuFLe6tplk90"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

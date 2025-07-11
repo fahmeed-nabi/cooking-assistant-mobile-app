@@ -1,88 +1,158 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { doc, getDoc } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
   Image,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { auth, db } from '../../services/firebase';
+import { auth, cleanupSavedRecipes, getSavedRecipesFromFirebase, removeRecipeFromFirebase } from '../../services/firebase';
 
 export default function SavedRecipesScreen() {
-  const [savedRecipes, setSavedRecipes] = useState<any[]>([]); // Changed type to any[] as Recipe is removed
+  const [savedRecipes, setSavedRecipes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    loadSavedRecipes();
-  }, []);
+  // Load recipes when screen focuses
+  useFocusEffect(
+    useCallback(() => {
+      loadSavedRecipes();
+    }, [])
+  );
 
   const loadSavedRecipes = async () => {
+    console.log('🔄 Loading saved recipes...');
     const user = auth.currentUser;
     if (!user) {
+      console.log('❌ No user logged in');
       setLoading(false);
       return;
     }
 
+    console.log('👤 User is logged in:', user.uid);
+
     try {
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      if (userDoc.exists()) {
-        const savedRecipeIds = userDoc.data().savedRecipes || [];
-        // Fetch actual recipe data from Firebase or a separate data source if needed
-        // For now, we'll just use the IDs to display a placeholder
-        const recipes = savedRecipeIds.map(id => ({
-          id,
-          title: 'Recipe Title Placeholder',
-          image: 'https://via.placeholder.com/150',
-          cookTime: 30,
-          cuisine: 'Cuisine Placeholder',
-          dietary: ['Dietary Placeholder'],
-        }));
-        setSavedRecipes(recipes);
-      }
+      const recipes = await getSavedRecipesFromFirebase();
+      console.log('📊 Loaded recipes from Firebase:', recipes.length, recipes);
+      setSavedRecipes(recipes);
     } catch (error) {
-      console.error('Error loading saved recipes:', error);
+      console.error('❌ Error loading saved recipes:', error);
       Alert.alert('Error', 'Failed to load saved recipes');
     } finally {
       setLoading(false);
     }
   };
 
-  const renderRecipe = ({ item }: { item: any }) => ( // Changed type to any
-    <TouchableOpacity
-      style={styles.recipeCard}
-      onPress={() => router.push(`/recipe/${item.id}`)}
-    >
-      <Image source={{ uri: item.image }} style={styles.recipeImage} />
-      <View style={styles.recipeContent}>
-        <Text style={styles.recipeTitle}>{item.title}</Text>
-        <View style={styles.recipeMeta}>
-          <View style={styles.metaItem}>
-            <Ionicons name="time-outline" size={14} color="#666" />
-            <Text style={styles.metaText}>{item.cookTime} min</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Ionicons name="restaurant-outline" size={14} color="#666" />
-            <Text style={styles.metaText}>{item.cuisine}</Text>
-          </View>
-        </View>
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadSavedRecipes();
+    setRefreshing(false);
+  };
 
-        <View style={styles.tags}>
-          {item.dietary.map(diet => (
-            <View key={diet} style={styles.tag}>
-              <Text style={styles.tagText}>{diet}</Text>
+  const handleCleanup = async () => {
+    Alert.alert(
+      'Clean Up Saved Recipes',
+      'This will remove any saved recipes that no longer exist. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Clean Up', 
+          onPress: async () => {
+            setLoading(true);
+            await cleanupSavedRecipes();
+            await loadSavedRecipes();
+            setLoading(false);
+          }
+        }
+      ]
+    );
+  };
+
+  const isPlaceholderRecipe = (recipe: any) => {
+    return recipe.title.startsWith('Recipe ') && recipe.ingredients.includes('Missing data');
+  };
+
+  const handleRecipePress = (recipe: any) => {
+    if (isPlaceholderRecipe(recipe)) {
+      Alert.alert(
+        'Recipe Not Available',
+        'This recipe is no longer available. Would you like to remove it from your saved recipes?',
+        [
+          { text: 'Keep', style: 'cancel' },
+          { 
+            text: 'Remove', 
+            onPress: () => removeInvalidRecipe(recipe.id)
+          }
+        ]
+      );
+      return;
+    }
+    
+    // Navigate to recipe detail with full recipe data
+    router.push(`/recipe/${recipe.id}?recipe=${encodeURIComponent(JSON.stringify(recipe))}`);
+  };
+
+  const removeInvalidRecipe = async (recipeId: string) => {
+    try {
+      const success = await removeRecipeFromFirebase(recipeId);
+      if (success) {
+        await loadSavedRecipes();
+        Alert.alert('Success', 'Invalid recipe removed from your saved list');
+      } else {
+        Alert.alert('Error', 'Failed to remove invalid recipe');
+      }
+    } catch (error) {
+      console.error('Error removing invalid recipe:', error);
+      Alert.alert('Error', 'Failed to remove invalid recipe');
+    }
+  };
+
+  const renderRecipe = ({ item }: { item: any }) => {
+    const isPlaceholder = isPlaceholderRecipe(item);
+    
+    return (
+      <TouchableOpacity
+        style={[styles.recipeCard, isPlaceholder && styles.placeholderCard]}
+        onPress={() => handleRecipePress(item)}
+      >
+        {isPlaceholder && (
+          <View style={styles.placeholderBadge}>
+            <Ionicons name="warning-outline" size={12} color="#ff6b6b" />
+            <Text style={styles.placeholderBadgeText}>Unavailable</Text>
+          </View>
+        )}
+        <Image source={{ uri: item.image }} style={styles.recipeImage} />
+        <View style={styles.recipeContent}>
+          <Text style={styles.recipeTitle}>{item.title}</Text>
+          <View style={styles.recipeMeta}>
+            <View style={styles.metaItem}>
+              <Ionicons name="time-outline" size={14} color="#666" />
+              <Text style={styles.metaText}>{item.cookTime} min</Text>
             </View>
-          ))}
+            <View style={styles.metaItem}>
+              <Ionicons name="restaurant-outline" size={14} color="#666" />
+              <Text style={styles.metaText}>{item.cuisine}</Text>
+            </View>
+          </View>
+
+          <View style={styles.tags}>
+              {item.dietary.map((diet: string) => (
+              <View key={diet} style={styles.tag}>
+                <Text style={styles.tagText}>{diet}</Text>
+              </View>
+              ))}
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   if (loading) {
     return (
@@ -132,7 +202,15 @@ export default function SavedRecipesScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Saved Recipes</Text>
+        <View style={styles.headerTop}>
+          <Text style={styles.title}>Saved Recipes</Text>
+          <TouchableOpacity
+            style={styles.cleanupButton}
+            onPress={handleCleanup}
+          >
+            <Ionicons name="refresh" size={20} color="#666" />
+          </TouchableOpacity>
+        </View>
         <Text style={styles.subtitle}>
           {savedRecipes.length} recipe{savedRecipes.length !== 1 ? 's' : ''} saved
         </Text>
@@ -144,6 +222,14 @@ export default function SavedRecipesScreen() {
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.recipesList}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#2f4f2f']}
+            tintColor="#2f4f2f"
+          />
+        }
       />
     </View>
   );
@@ -208,6 +294,14 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 24,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cleanupButton: {
+    padding: 8,
   },
   title: {
     fontSize: 28,
@@ -277,4 +371,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
   },
-}); 
+  placeholderCard: {
+    opacity: 0.7,
+    borderColor: '#ff6b6b',
+    borderWidth: 1,
+  },
+  placeholderBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  placeholderBadgeText: {
+    fontSize: 10,
+    color: '#ff6b6b',
+    marginLeft: 4,
+    fontWeight: '600',
+  },
+});

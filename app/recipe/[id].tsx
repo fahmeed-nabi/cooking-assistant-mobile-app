@@ -1,19 +1,24 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { arrayRemove, arrayUnion, doc, getDoc, setDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import { auth, db } from '../../services/firebase';
+import {
+  auth,
+  getIngredientsFromFirebase,
+  isRecipeSaved,
+  removeRecipeFromFirebase,
+  saveRecipeToFirebase
+} from '../../services/firebase';
 
 export default function RecipeDetailScreen() {
   const params = useLocalSearchParams();
@@ -39,8 +44,20 @@ export default function RecipeDetailScreen() {
       
       // Get recipe data from navigation params
       if (recipeParam) {
-        const foundRecipe = JSON.parse(recipeParam as string);
+        const foundRecipe = JSON.parse(decodeURIComponent(recipeParam as string));
         console.log('Parsed recipe:', foundRecipe);
+        
+        // Check if this is a placeholder recipe
+        if (foundRecipe.title.startsWith('Recipe ') && foundRecipe.ingredients.includes('Missing data')) {
+          console.log('❌ Placeholder recipe detected');
+          Alert.alert(
+            'Recipe Not Available',
+            'This recipe is no longer available. Please remove it from your saved recipes.',
+            [{ text: 'OK', onPress: () => router.back() }]
+          );
+          return;
+        }
+        
         setRecipe(foundRecipe);
       } else {
         console.log('No recipe param found');
@@ -61,12 +78,10 @@ export default function RecipeDetailScreen() {
     if (!user) return;
 
     try {
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        setUserIngredients(data.ingredients || []);
-        setIsSaved(data.savedRecipes?.includes(id) || false);
-      }
+      const ingredients = await getIngredientsFromFirebase();
+      const saved = await isRecipeSaved(id as string);
+      setUserIngredients(ingredients);
+      setIsSaved(saved);
     } catch (error) {
       console.error('Error loading user data:', error);
     }
@@ -75,26 +90,49 @@ export default function RecipeDetailScreen() {
   const toggleSaveRecipe = async () => {
     const user = auth.currentUser;
     if (!user) {
+      console.log('❌ No user logged in, showing login modal');
       setShowLoginModal(true);
       return;
     }
 
+    if (!recipe) {
+      console.log('❌ No recipe data available');
+      return;
+    }
+
+    if (saving) {
+      console.log('⏳ Save operation already in progress, ignoring duplicate call');
+      return;
+    }
+
+    console.log('🔄 Toggling save for recipe:', recipe.id, recipe.title);
     setSaving(true);
     try {
-      const userRef = doc(db, 'users', user.uid);
       if (isSaved) {
-        await setDoc(userRef, {
-          savedRecipes: arrayRemove(id)
-        }, { merge: true });
-        setIsSaved(false);
+        console.log('🗑️ Removing recipe from saved');
+        const success = await removeRecipeFromFirebase(recipe.id);
+        if (success) {
+          setIsSaved(false);
+          console.log('✅ Recipe removed successfully');
+        } else {
+          console.log('❌ Failed to remove recipe');
+          Alert.alert('Error', 'Failed to remove recipe from saved');
+        }
       } else {
-        await setDoc(userRef, {
-          savedRecipes: arrayUnion(id)
-        }, { merge: true });
-        setIsSaved(true);
+        console.log('💾 Saving recipe');
+        const success = await saveRecipeToFirebase(recipe);
+        if (success) {
+          setIsSaved(true);
+          console.log('✅ Recipe saved successfully');
+          // Small delay to ensure data propagates to all Firebase replicas
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } else {
+          console.log('❌ Failed to save recipe');
+          Alert.alert('Error', 'Failed to save recipe. Please try again.');
+        }
       }
     } catch (error) {
-      console.error('Error saving recipe:', error);
+      console.error('❌ Error saving recipe:', error);
       Alert.alert('Error', 'Failed to save recipe');
     } finally {
       setSaving(false);

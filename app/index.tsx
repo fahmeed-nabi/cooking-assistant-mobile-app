@@ -44,7 +44,6 @@ export default function WelcomeScreen() {
       <Image source={require('../assets/logo.png')} style={styles.logo} />
       
       <View style={styles.content}>
-        <Text style={styles.title}>MealMatch</Text>
         <Text style={styles.subtitle}>
           Discover delicious recipes using ingredients you already have
         </Text>
