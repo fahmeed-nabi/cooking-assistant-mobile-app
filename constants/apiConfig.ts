@@ -22,7 +22,8 @@ export const API_CONFIG = {
   NORMAL_MATCH_SCORE: 0.6,  // Minimum score for normal mode
   SURPRISE_RANDOMNESS: 0.3, // Randomness factor for surprise mode
 
-  GEMINI_API_KEY: 'AIzaSyBjlEW2NxbXpwpyLxepCwuiuFLe6tplk90',
+  GEMINI_API_KEY: 'REPLACE_WITH_YOUR_GEMINI_API_KEY',
+
   
   // Unsplash API for recipe images
   // Get free API key at: https://unsplash.com/developers
